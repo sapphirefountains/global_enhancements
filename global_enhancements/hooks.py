@@ -15,8 +15,12 @@ doc_events = {
 
 # --- Include JS and CSS in the desk build ---
 # This bundles the assets for every page load
-app_include_js = "/assets/global_enhancements/js/mentions_bundle.js"
-app_include_css = "/assets/global_enhancements/css/mentions_bundle.css"
+app_include_js = [
+    "https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/js/jquery.atwho.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/Caret.js/0.3.1/jquery.caret.min.js",
+    "/assets/global_enhancements/js/mentions.js"
+]
+app_include_css = "https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/css/jquery.atwho.min.css"
 
 # Apps
 # ------------------
