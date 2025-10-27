@@ -5,6 +5,19 @@ app_description = "Enhance features on Frappe globally."
 app_email = "info@sapphirefountains.com"
 app_license = "mit"
 
+# --- Document Events ---
+# This hook triggers on every document save
+doc_events = {
+    "*": {
+        "on_update": "global_enhancements.global_enhancements.mentions.process_mentions_on_update"
+    }
+}
+
+# --- Include JS and CSS in the desk build ---
+# This bundles the assets for every page load
+app_include_js = "/assets/global_enhancements/js/mentions_bundle.js"
+app_include_css = "/assets/global_enhancements/css/mentions_bundle.css"
+
 # Apps
 # ------------------
 
