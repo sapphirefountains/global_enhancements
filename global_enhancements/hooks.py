@@ -5,22 +5,6 @@ app_description = "Enhance features on Frappe globally."
 app_email = "info@sapphirefountains.com"
 app_license = "mit"
 
-# --- Document Events ---
-# This hook triggers on every document save
-doc_events = {
-    "*": {
-        "on_update": "global_enhancements.global_enhancements.mentions.process_mentions_on_update"
-    }
-}
-
-# --- Include JS and CSS in the desk build ---
-# This bundles the assets for every page load
-app_include_js = [
-    "https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/js/jquery.atwho.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/Caret.js/0.3.1/jquery.caret.min.js",
-    "/assets/global_enhancements/js/mentions.js"
-]
-app_include_css = "https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/css/jquery.atwho.min.css"
 
 # Apps
 # ------------------
@@ -43,7 +27,7 @@ app_include_css = "https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/css/jquery
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/global_enhancements/css/global_enhancements.css"
-# app_include_js = "/assets/global_enhancements/js/global_enhancements.js"
+app_include_js = "/assets/global_enhancements/js/quill_mentions.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/global_enhancements/css/global_enhancements.css"
