@@ -12,6 +12,7 @@ $(document).ready(function() {
             limit: 10,
             displayTpl: "<li>${label} <small>(${value})</small></li>",
             insertTpl: '<a href="/app/user/${value}" class="mention-link">${label}</a>',
+            appendTo: "body",
             callbacks: {
                 remoteFilter: function(query, callback) {
                     frappe.call({
@@ -30,4 +31,3 @@ $(document).ready(function() {
         });
     });
 });
-
