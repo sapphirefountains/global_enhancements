@@ -48,10 +48,14 @@ $(document).ready(function() {
                             var text = quill.getText(0, range.index);
                             var at_pos = text.lastIndexOf('@');
                             if (at_pos > -1) {
-                                quill.deleteText(at_pos, range.index - at_pos);
-                                quill.insertText(at_pos, mention.label, { 'link': '/app/user/' + mention.value });
-                                quill.insertText(at_pos + mention.label.length, " ");
-                                quill.setSelection(at_pos + mention.label.length + 1);
+                                var Delta = quill.constructor.import('delta');
+                                var delta = new Delta()
+                                    .retain(at_pos)
+                                    .delete(range.index - at_pos)
+                                    .insert(mention.label, { 'link': '/app/user/' + mention.value })
+                                    .insert(' ');
+                                quill.updateContents(delta, 'user');
+                                quill.setSelection(at_pos + mention.label.length + 1, 'silent');
                             }
                         }
                     }
