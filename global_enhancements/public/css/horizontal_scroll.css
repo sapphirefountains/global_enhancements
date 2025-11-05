@@ -4,8 +4,27 @@
     scrollbar-width: thin;
 }
 
+/* Make the scrollbar always visible and styled */
+.horizontal-scroll-container::-webkit-scrollbar {
+    -webkit-appearance: none;
+    height: 8px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
 .kanban-card-container {
-    max-height: 50vh;
+    max-height: 300px;
     overflow-y: auto !important;
     scrollbar-width: thin;
 }
