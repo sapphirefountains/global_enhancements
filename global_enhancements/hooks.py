@@ -28,8 +28,7 @@ app_license = "mit"
 # include js, css files in header of desk.html
 app_include_css = "/assets/global_enhancements/css/horizontal_scroll.css"
 app_include_js = [
-    "/assets/global_enhancements/js/quill_mentions.js",
-    "/assets/global_enhancements/js/horizontal_scroll.js"
+    "/assets/global_enhancements/js/quill_mentions.js"
 ]
 
 # include js, css files in header of web template
