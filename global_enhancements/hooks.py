@@ -26,10 +26,14 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/global_enhancements/css/horizontal_scroll.css"
-app_include_js = [
-    "/assets/global_enhancements/js/quill_mentions.js"
-]
+app_include_js = ["/assets/global_enhancements/js/quill_mentions.js"]
+
+# include js in doctype views
+# doctype_js = {"doctype" : "public/js/doctype.js"}
+# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
+# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 
 # include js, css files in header of web template
 # web_include_css = "/assets/global_enhancements/css/global_enhancements.css"
@@ -244,4 +248,3 @@ app_include_js = [
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
