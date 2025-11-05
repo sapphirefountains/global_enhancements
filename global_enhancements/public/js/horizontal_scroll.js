@@ -10,6 +10,9 @@ frappe.views.KanbanView = class KanbanView extends frappe.views.KanbanView {
                             const parentContainer = kanbanContainer.parentElement;
                             parentContainer.classList.add('horizontal-scroll-container');
                             parentContainer.addEventListener('wheel', function(e) {
+                                if (e.target.closest('.kanban-card-container')) {
+                                    return;
+                                }
                                 if (e.deltaY !== 0) {
                                     e.preventDefault();
                                     parentContainer.scrollBy({
