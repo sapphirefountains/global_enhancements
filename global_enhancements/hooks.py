@@ -33,6 +33,7 @@ app_include_js = ["/assets/global_enhancements/js/quill_mentions.js"]
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+doctype_js = {"Opportunity": "public/js/disable_kanban_drag.js"}
 doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 
 # include js, css files in header of web template
