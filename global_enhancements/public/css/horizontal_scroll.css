@@ -25,7 +25,8 @@
     pointer-events: none;
 }
 
-.kanban-columns[data-doctype="Opportunity"] .kanban-card .kanban-card-items .kanban-card-item .add-card {
-    /* Re-enable mouse events for the plus icon so it can be clicked */
+.kanban-columns[data-doctype="Opportunity"] .kanban-card .kanban-card-items .kanban-card-item .add-card,
+.kanban-columns[data-doctype="Opportunity"] .kanban-card .kanban-card-title {
+    /* Re-enable mouse events for the plus icon and title so they can be clicked */
     pointer-events: auto;
 }
