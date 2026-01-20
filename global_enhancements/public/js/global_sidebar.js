@@ -13,10 +13,11 @@ frappe.ready(function () {
 		// Prevent duplicate injection
 		if ($(`.${HOME_ITEM_CLASS}`).length > 0) return;
 
-		// Find the "Workspaces" sidebar item.
-		// We look for a label containing "Workspaces" and traverse up to the main item container.
-		// Standard Frappe sidebar structure usually involves .standard-sidebar-item or .sidebar-item-container
-		const $workspacesLabel = $('.sidebar-item-label:contains("Workspaces")');
+		// Find the "Workspaces" sidebar item by text content.
+		// We filter .sidebar-item-label elements to find one that exactly matches "Workspaces"
+		const $workspacesLabel = $('.sidebar-item-label').filter(function() {
+			return $(this).text().trim() === "Workspaces";
+		});
 
 		if ($workspacesLabel.length === 0) return;
 
@@ -42,15 +43,24 @@ frappe.ready(function () {
 			$iconUse.attr("href", "#icon-home");
 		} else {
 			// Fallback: try to replace the icon container content if structure is different
-			$homeItem.find(".sidebar-item-icon").html(frappe.utils.icon("home", "md"));
+			const $iconContainer = $homeItem.find(".sidebar-item-icon");
+			if ($iconContainer.length > 0) {
+				$iconContainer.html(frappe.utils.icon("home", "md"));
+			}
 		}
 
 		// Update the click behavior
 		$homeItem.off("click"); // Remove existing listeners from the clone
+		$homeItem.find("a").attr("href", "#"); // Prevent default navigation if it's an anchor
+
 		$homeItem.on("click", function (e) {
 			e.preventDefault();
 			e.stopPropagation();
 			frappe.set_route("desk", "home");
+
+			// Visual feedback: clear selection from others and select this
+			$(".standard-sidebar-item").removeClass("selected");
+			$(this).addClass("selected");
 		});
 
 		// Insert the Home item BEFORE the Workspaces item
