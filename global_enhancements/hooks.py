@@ -26,7 +26,10 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_js = ["/assets/global_enhancements/js/quill_mentions.js"]
+app_include_js = [
+	"/assets/global_enhancements/js/quill_mentions.js",
+	"/assets/global_enhancements/js/global_sidebar.js",
+]
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
