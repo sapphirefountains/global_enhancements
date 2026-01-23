@@ -1,106 +1,114 @@
-/*
- * Corrected global_sidebar.js
- * Replaced frappe.ready() with $(document).ready() to ensure it runs safely
- * even if frappe.ready isn't immediately available or reliable in this context.
- */
-
 $(document).ready(function () {
-	// Helper to run code only when Frappe is fully initialized
+	const HOME_ITEM_CLASS = "custom-home-sidebar-item";
+
+	// Helper to update selection state based on current route
+	const updateSelectionState = () => {
+		const route = frappe.get_route();
+		// Check if we are at root, /desk, or /desk/home
+		const isHome = !route || route.length === 0 || (route.length === 1 && route[0] === "desk") || (route.length === 2 && route[0] === "desk" && route[1] === "home");
+
+		const $homeItem = $(`.${HOME_ITEM_CLASS}`);
+		if ($homeItem.length === 0) return;
+
+		if (isHome) {
+			// Select Home, Deselect others to visually indicate we are on Home
+			$(".standard-sidebar-item").removeClass("selected");
+			$homeItem.addClass("selected");
+		} else {
+			// Deselect Home (Frappe logic will handle selecting the active workspace/item)
+			$homeItem.removeClass("selected");
+		}
+	};
+
+	// Helper to inject the Home item
+	const injectHomeItem = () => {
+		// 1. Check if already injected
+		if ($(`.${HOME_ITEM_CLASS}`).length > 0) {
+			// Ensure selection state is correct even if item exists
+			updateSelectionState();
+			return;
+		}
+
+		// 2. Find the "Workspaces" sidebar item by text content
+		// We filter .sidebar-item-label to find the specific "Workspaces" entry
+		const $workspacesLabel = $('.sidebar-item-label').filter(function () {
+			return $(this).text().trim() === "Workspaces";
+		});
+
+		// If Workspaces item isn't rendered yet, we can't clone it or place before it
+		if ($workspacesLabel.length === 0) return;
+
+		const $workspacesItem = $workspacesLabel.closest(".standard-sidebar-item");
+		if ($workspacesItem.length === 0) return;
+
+		// 3. Clone the Workspaces item to inherit styles and structure
+		const $homeItem = $workspacesItem.clone();
+		$homeItem.addClass(HOME_ITEM_CLASS);
+		$homeItem.removeClass("selected"); // Default to unselected
+
+		// Update label
+		$homeItem.find(".sidebar-item-label").text("Home");
+
+		// Update icon
+		const $iconUse = $homeItem.find(".icon use");
+		if ($iconUse.length > 0) {
+			$iconUse.attr("href", "#icon-home");
+		} else {
+			// Fallback: try to replace the icon container content if structure is different
+			const $iconContainer = $homeItem.find(".sidebar-item-icon");
+			if ($iconContainer.length > 0) {
+				$iconContainer.html(frappe.utils.icon("home", "md"));
+			}
+		}
+
+		// Remove existing listeners from the clone and prevent default link behavior
+		$homeItem.off("click");
+		$homeItem.find("a").attr("href", "#");
+
+		// Insert the Home item BEFORE the Workspaces item
+		$workspacesItem.before($homeItem);
+
+		// Set initial selection state
+		updateSelectionState();
+	};
+
+	// Event Delegation for Click on the new Home button
+	$(document).on("click", `.${HOME_ITEM_CLASS}`, function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		frappe.set_route("desk", "home");
+		// Immediate visual feedback
+		updateSelectionState();
+	});
+
+	// Wait for Frappe to be ready before starting logic
 	const runWhenFrappeReady = (callback) => {
-		if (window.frappe && window.frappe.ui) {
+		if (window.frappe && window.frappe.ui && window.frappe.router) {
 			callback();
 		} else {
 			setTimeout(() => runWhenFrappeReady(callback), 100);
 		}
 	};
 
-	runWhenFrappeReady(function () {
-		// 1. Default Landing Page Logic
-		// Check if the current route is empty (root) or just 'desk'
+	runWhenFrappeReady(() => {
+		// 1. Redirect to desk/home if on root or /desk
 		const route = frappe.get_route();
 		if (!route || route.length === 0 || (route.length === 1 && route[0] === "desk")) {
 			frappe.set_route("desk", "home");
 		}
 
-		// 2. Sidebar "Home" Link Injection
-		const HOME_ITEM_CLASS = "custom-home-sidebar-item";
-
-		// Use event delegation to handle clicks.
-		// This ensures the handler works even if Frappe re-renders the sidebar DOM elements.
-		$(document).on("click", `.${HOME_ITEM_CLASS}`, function (e) {
-			e.preventDefault();
-			e.stopPropagation();
-			frappe.set_route("desk", "home");
-
-			// Visual feedback: clear selection from others and select this
-			$(".standard-sidebar-item").removeClass("selected");
-			$(this).addClass("selected");
-		});
-
-		const injectHomeItem = () => {
-			// Prevent duplicate injection
-			if ($(`.${HOME_ITEM_CLASS}`).length > 0) return;
-
-			// Find the "Workspaces" sidebar item by text content.
-			// We filter .sidebar-item-label elements to find one that exactly matches "Workspaces"
-			const $workspacesLabel = $('.sidebar-item-label').filter(function() {
-				return $(this).text().trim() === "Workspaces";
-			});
-
-			if ($workspacesLabel.length === 0) return;
-
-			// Find the actionable item container (usually the parent or close ancestor)
-			const $workspacesItem = $workspacesLabel.closest(".standard-sidebar-item");
-
-			if ($workspacesItem.length === 0) return;
-
-			// Clone the item to inherit styles (padding, hover effects, etc.)
-			const $homeItem = $workspacesItem.clone();
-
-			// Add custom class for identification and preventing duplicates
-			$homeItem.addClass(HOME_ITEM_CLASS);
-			$homeItem.removeClass("selected"); // Ensure it doesn't look active initially
-
-			// Update the label
-			$homeItem.find(".sidebar-item-label").text("Home");
-
-			// Update the icon
-			// Frappe icons are usually <use href="#icon-name">
-			const $iconUse = $homeItem.find(".icon use");
-			if ($iconUse.length > 0) {
-				$iconUse.attr("href", "#icon-home");
-			} else {
-				// Fallback: try to replace the icon container content if structure is different
-				const $iconContainer = $homeItem.find(".sidebar-item-icon");
-				if ($iconContainer.length > 0) {
-					$iconContainer.html(frappe.utils.icon("home", "md"));
-				}
-			}
-
-			// Update the click behavior
-			$homeItem.off("click"); // Remove existing listeners from the clone
-			$homeItem.find("a").attr("href", "#"); // Prevent default navigation if it's an anchor
-
-			// Insert the Home item BEFORE the Workspaces item
-			$workspacesItem.before($homeItem);
-		};
-
-		// Use MutationObserver to watch for Sidebar rendering
-		// The sidebar might be re-rendered during navigation or initialization
-		const observer = new MutationObserver((mutations) => {
-			// Quick check to see if we need to inject
-			if ($(`.${HOME_ITEM_CLASS}`).length === 0) {
-				injectHomeItem();
-			}
-		});
-
-		// Observe the body because the sidebar container might be created dynamically
-		observer.observe(document.body, {
-			childList: true,
-			subtree: true,
-		});
-
-		// Try injecting immediately in case DOM is already ready
+		// 2. Inject immediately if possible
 		injectHomeItem();
+
+		// 3. Listen for route changes to re-check injection and selection
+		frappe.router.on('change', () => {
+			// Small delay to allow sidebar re-render if it happens on navigation
+			setTimeout(injectHomeItem, 200);
+		});
+
+		// 4. Polling fallback: Check periodically to ensure button persists
+		// This handles cases where the sidebar is re-rendered without a route change
+		// or if the initial injection missed.
+		setInterval(injectHomeItem, 1000);
 	});
 });
