@@ -16,9 +16,12 @@ $(document).ready(function () {
 
 	runWhenFrappeReady(function () {
 		// 1. Default Landing Page Logic
-		// Check if the current route is empty (root) or just 'desk'
-		const route = frappe.get_route();
-		if (!route || route.length === 0 || (route.length === 1 && route[0] === "desk")) {
+		// Use window.location to check the URL to avoid race conditions with frappe.get_route() during load
+		const path = window.location.pathname.replace(/\/$/, "");
+		// Check against common base paths: root, /desk (legacy/standard), /app (v15+)
+		const isBaseUrl = path === "" || path === "/desk" || path === "/app";
+
+		if (isBaseUrl && !window.location.hash) {
 			frappe.set_route("desk", "home");
 		}
 
