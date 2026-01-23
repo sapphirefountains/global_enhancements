@@ -92,8 +92,10 @@ $(document).ready(function () {
 
 	runWhenFrappeReady(() => {
 		// 1. Redirect to desk/home if on root or /desk
-		const route = frappe.get_route();
-		if (!route || route.length === 0 || (route.length === 1 && route[0] === "desk")) {
+		// We use window.location directly to avoid race conditions with frappe.get_route()
+		const path = window.location.pathname.toLowerCase().replace(/\/$/, ""); // Remove trailing slash
+		// Check for root (/), /app, or /desk. Also ensure no hash exists (which implies a deep link in legacy routing).
+		if ((path === "" || path === "/app" || path === "/desk") && !window.location.hash) {
 			frappe.set_route("desk", "home");
 		}
 
