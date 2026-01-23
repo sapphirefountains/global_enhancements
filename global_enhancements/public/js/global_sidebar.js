@@ -25,6 +25,18 @@ $(document).ready(function () {
 		// 2. Sidebar "Home" Link Injection
 		const HOME_ITEM_CLASS = "custom-home-sidebar-item";
 
+		// Use event delegation to handle clicks.
+		// This ensures the handler works even if Frappe re-renders the sidebar DOM elements.
+		$(document).on("click", `.${HOME_ITEM_CLASS}`, function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			frappe.set_route("desk", "home");
+
+			// Visual feedback: clear selection from others and select this
+			$(".standard-sidebar-item").removeClass("selected");
+			$(this).addClass("selected");
+		});
+
 		const injectHomeItem = () => {
 			// Prevent duplicate injection
 			if ($(`.${HOME_ITEM_CLASS}`).length > 0) return;
@@ -68,16 +80,6 @@ $(document).ready(function () {
 			// Update the click behavior
 			$homeItem.off("click"); // Remove existing listeners from the clone
 			$homeItem.find("a").attr("href", "#"); // Prevent default navigation if it's an anchor
-
-			$homeItem.on("click", function (e) {
-				e.preventDefault();
-				e.stopPropagation();
-				frappe.set_route("desk", "home");
-
-				// Visual feedback: clear selection from others and select this
-				$(".standard-sidebar-item").removeClass("selected");
-				$(this).addClass("selected");
-			});
 
 			// Insert the Home item BEFORE the Workspaces item
 			$workspacesItem.before($homeItem);
