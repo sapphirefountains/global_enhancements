@@ -91,15 +91,7 @@ $(document).ready(function () {
 	};
 
 	runWhenFrappeReady(() => {
-		// 1. Redirect to desk/home if on root or /desk
-		// We use window.location directly to avoid race conditions with frappe.get_route()
-		const path = window.location.pathname.toLowerCase().replace(/\/$/, ""); // Remove trailing slash
-		// Check for root (/), /app, or /desk. Also ensure no hash exists (which implies a deep link in legacy routing).
-		if ((path === "" || path === "/app" || path === "/desk") && !window.location.hash) {
-			frappe.set_route("desk", "home");
-		}
-
-		// 2. Inject immediately if possible
+		// 1. Inject immediately if possible
 		injectHomeItem();
 
 		// 3. Listen for route changes to re-check injection and selection
