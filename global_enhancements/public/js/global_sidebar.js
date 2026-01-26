@@ -22,51 +22,53 @@ $(document).ready(function () {
 
 	// Helper to inject the Home item
 	const injectHomeItem = () => {
-		// 1. Check if already injected
-		if ($(`.${HOME_ITEM_CLASS}`).length > 0) {
-			// Ensure selection state is correct even if item exists
-			updateSelectionState();
-			return;
-		}
-
-		// 2. Find the "Workspaces" sidebar item by text content
+		// Find ALL "Workspaces" sidebar items (in case of multiple sidebars/zombies)
 		// We filter .sidebar-item-label to find the specific "Workspaces" entry
-		const $workspacesLabel = $('.sidebar-item-label').filter(function () {
-			return $(this).text().trim() === "Workspaces";
+		const $workspacesLabels = $('.sidebar-item-label').filter(function () {
+			return $(this).text().trim().toLowerCase() === "workspaces";
 		});
 
 		// If Workspaces item isn't rendered yet, we can't clone it or place before it
-		if ($workspacesLabel.length === 0) return;
+		if ($workspacesLabels.length === 0) return;
 
-		const $workspacesItem = $workspacesLabel.closest(".standard-sidebar-item");
-		if ($workspacesItem.length === 0) return;
+		$workspacesLabels.each(function () {
+			const $label = $(this);
+			const $workspacesItem = $label.closest(".standard-sidebar-item");
+			if ($workspacesItem.length === 0) return;
 
-		// 3. Clone the Workspaces item to inherit styles and structure
-		const $homeItem = $workspacesItem.clone();
-		$homeItem.addClass(HOME_ITEM_CLASS);
-		$homeItem.removeClass("selected"); // Default to unselected
-
-		// Update label
-		$homeItem.find(".sidebar-item-label").text("Home");
-
-		// Update icon
-		const $iconUse = $homeItem.find(".icon use");
-		if ($iconUse.length > 0) {
-			$iconUse.attr("href", "#icon-home");
-		} else {
-			// Fallback: try to replace the icon container content if structure is different
-			const $iconContainer = $homeItem.find(".sidebar-item-icon");
-			if ($iconContainer.length > 0) {
-				$iconContainer.html(frappe.utils.icon("home", "md"));
+			// Check if we already injected BEFORE this specific item
+			const $prev = $workspacesItem.prev();
+			if ($prev.hasClass(HOME_ITEM_CLASS)) {
+				return; // Already present for this instance
 			}
-		}
 
-		// Remove existing listeners from the clone and prevent default link behavior
-		$homeItem.off("click");
-		$homeItem.find("a").attr("href", "#");
+			// 3. Clone the Workspaces item to inherit styles and structure
+			const $homeItem = $workspacesItem.clone();
+			$homeItem.addClass(HOME_ITEM_CLASS);
+			$homeItem.removeClass("selected"); // Default to unselected
 
-		// Insert the Home item BEFORE the Workspaces item
-		$workspacesItem.before($homeItem);
+			// Update label
+			$homeItem.find(".sidebar-item-label").text("Home");
+
+			// Update icon
+			const $iconUse = $homeItem.find(".icon use");
+			if ($iconUse.length > 0) {
+				$iconUse.attr("href", "#icon-home");
+			} else {
+				// Fallback: try to replace the icon container content if structure is different
+				const $iconContainer = $homeItem.find(".sidebar-item-icon");
+				if ($iconContainer.length > 0) {
+					$iconContainer.html(frappe.utils.icon("home", "md"));
+				}
+			}
+
+			// Remove existing listeners from the clone and prevent default link behavior
+			$homeItem.off("click");
+			$homeItem.find("a").attr("href", "#");
+
+			// Insert the Home item BEFORE the Workspaces item
+			$workspacesItem.before($homeItem);
+		});
 
 		// Set initial selection state
 		updateSelectionState();
