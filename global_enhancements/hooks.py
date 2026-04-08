@@ -33,6 +33,13 @@ app_include_js = [
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Project": "public/js/primary_contact.js",
+    "Opportunity": "public/js/primary_contact.js",
+    "Lead": "public/js/primary_contact.js",
+    "Supplier": "public/js/primary_contact.js",
+    "Customer": "public/js/primary_contact.js"
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -95,6 +102,7 @@ doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 
 # before_install = "global_enhancements.install.before_install"
 # after_install = "global_enhancements.install.after_install"
+after_migrate = "global_enhancements.setup.custom_fields.create_primary_contact_fields"
 
 # Uninstallation
 # ------------
@@ -155,6 +163,27 @@ doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 # 		"on_trash": "method"
 # 	}
 # }
+
+doc_events = {
+    "Contact": {
+        "on_update": "global_enhancements.sync_contact.sync_from_contact"
+    },
+    "Project": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
+    },
+    "Opportunity": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
+    },
+    "Lead": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
+    },
+    "Supplier": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
+    },
+    "Customer": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
+    }
+}
 
 # Scheduled Tasks
 # ---------------
