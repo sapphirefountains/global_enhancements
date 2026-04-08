@@ -14,47 +14,57 @@ def create_primary_contact_fields():
 	for doctype in doctypes:
 		insert_after = get_insert_after_field(doctype)
 
-		custom_fields = {
-			doctype: [
-				{
-					"fieldname": "primary_contact_section",
-					"label": "Primary Contact",
-					"fieldtype": "Section Break",
-					"insert_after": insert_after
-				},
-				{
-					"fieldname": "primary_contact",
-					"label": "Full Name",
-					"fieldtype": "Link",
-					"options": "Contact",
-					"insert_after": "primary_contact_section"
-				},
-				{
-					"fieldname": "primary_contact_job_title",
-					"label": "Job Title",
-					"fieldtype": "Data",
-					"insert_after": "primary_contact",
-				},
-				{
-					"fieldname": "primary_contact_col_break",
-					"fieldtype": "Column Break",
-					"insert_after": "primary_contact_job_title"
-				},
-				{
-					"fieldname": "primary_contact_phone",
-					"label": "Phone",
-					"fieldtype": "Data",
-					"insert_after": "primary_contact_col_break"
-				},
-				{
-					"fieldname": "primary_contact_email",
-					"label": "Email Address",
-					"fieldtype": "Data",
-					"insert_after": "primary_contact_phone"
-				}
-			]
-		}
-		create_custom_fields(custom_fields)
+		all_fields = [
+			{
+				"fieldname": "primary_contact_section",
+				"label": "Primary Contact",
+				"fieldtype": "Section Break",
+				"insert_after": insert_after
+			},
+			{
+				"fieldname": "primary_contact",
+				"label": "Full Name",
+				"fieldtype": "Link",
+				"options": "Contact",
+				"insert_after": "primary_contact_section"
+			},
+			{
+				"fieldname": "primary_contact_job_title",
+				"label": "Job Title",
+				"fieldtype": "Data",
+				"insert_after": "primary_contact",
+			},
+			{
+				"fieldname": "primary_contact_col_break",
+				"fieldtype": "Column Break",
+				"insert_after": "primary_contact_job_title"
+			},
+			{
+				"fieldname": "primary_contact_phone",
+				"label": "Phone",
+				"fieldtype": "Data",
+				"insert_after": "primary_contact_col_break"
+			},
+			{
+				"fieldname": "primary_contact_email",
+				"label": "Email Address",
+				"fieldtype": "Data",
+				"insert_after": "primary_contact_phone"
+			}
+		]
+
+		fields_to_process = []
+		meta = frappe.get_meta(doctype)
+		for field in all_fields:
+			# If the field exists but is NOT a Custom Field, it is a Standard Field.
+			# We must skip it to avoid a validation error during creation.
+			if meta.has_field(field["fieldname"]) and not frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}):
+				continue
+			fields_to_process.append(field)
+
+		if fields_to_process:
+			custom_fields = {doctype: fields_to_process}
+			create_custom_fields(custom_fields, update=True)
 
 
 def get_insert_after_field(doctype):
