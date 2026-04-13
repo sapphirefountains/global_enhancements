@@ -6,13 +6,13 @@ primary_contact_doctypes.forEach(doctype => {
 			if (frm.doc.primary_contact) {
 				// Fetch contact details
 				frappe.db.get_value('Contact', frm.doc.primary_contact,
-					['designation', 'phone', 'mobile_no', 'email_id'])
+					['custom_title', 'phone', 'mobile_no', 'custom_email'])
 				.then(r => {
 					if (r && r.message) {
 						let values = r.message;
-						frm.set_value('primary_contact_job_title', values.designation || '');
+						frm.set_value('primary_contact_job_title', values.custom_title || '');
 						frm.set_value('primary_contact_phone', values.phone || values.mobile_no || '');
-						frm.set_value('primary_contact_email', values.email_id || '');
+						frm.set_value('primary_contact_email', values.custom_email || '');
 					}
 				});
 			} else {
