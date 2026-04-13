@@ -6,6 +6,14 @@ def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
         return
 
+    # If the user just selected a new primary contact, don't overwrite the contact
+    # with the old form values that haven't been refreshed yet.
+    is_new = getattr(doc, "is_new", None)
+    if not (callable(is_new) and is_new()) and not (isinstance(is_new, bool) and is_new):
+        old_doc = doc.get_doc_before_save()
+        if old_doc and old_doc.primary_contact != doc.primary_contact:
+            return
+
     contact = frappe.get_doc("Contact", doc.primary_contact)
     changed = False
 
@@ -14,49 +22,49 @@ def sync_from_main_doc(doc, method):
 
     # Sync Job Title
     job_title = getattr(doc, "primary_contact_job_title", "") or ""
-    if contact.designation != job_title:
+    if (contact.designation or "") != job_title:
         contact.designation = job_title
         changed = True
 
     # Sync Phone
     phone = getattr(doc, "primary_contact_phone", "") or ""
-    if phone:
+    if phone or (contact.phone and not phone):
         # Update existing primary phone, or add if it doesn't exist
         primary_phone_found = False
         for p in contact.get("phone_nos", []):
             if p.is_primary_phone:
-                if p.phone != phone:
+                if (p.phone or "") != phone:
                     p.phone = phone
                     changed = True
                 primary_phone_found = True
                 break
 
-        if not primary_phone_found:
+        if not primary_phone_found and phone:
             contact.append("phone_nos", {"phone": phone, "is_primary_phone": 1})
             changed = True
 
-        if contact.phone != phone:
+        if (contact.phone or "") != phone:
             contact.phone = phone
             changed = True
 
     # Sync Email
     email = getattr(doc, "primary_contact_email", "") or ""
-    if email:
+    if email or (contact.email_id and not email):
         # Update existing primary email, or add if it doesn't exist
         primary_email_found = False
         for e in contact.get("email_ids", []):
             if e.is_primary:
-                if e.email_id != email:
+                if (e.email_id or "") != email:
                     e.email_id = email
                     changed = True
                 primary_email_found = True
                 break
 
-        if not primary_email_found:
+        if not primary_email_found and email:
             contact.append("email_ids", {"email_id": email, "is_primary": 1})
             changed = True
 
-        if contact.email_id != email:
+        if (contact.email_id or "") != email:
             contact.email_id = email
             changed = True
 
