@@ -2,6 +2,12 @@ const primary_contact_doctypes = ['Project', 'Opportunity', 'Lead', 'Supplier', 
 
 primary_contact_doctypes.forEach(doctype => {
 	frappe.ui.form.on(doctype, {
+
+		refresh: function(frm) {
+			if (frappe.contacts && frappe.contacts.setup) {
+				frappe.contacts.setup(frm);
+			}
+		},
 		primary_contact: function(frm) {
 			if (frm.doc.primary_contact) {
 				// Fetch contact details
