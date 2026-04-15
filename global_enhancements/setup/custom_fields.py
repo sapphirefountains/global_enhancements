@@ -50,6 +50,12 @@ def create_primary_contact_fields():
 				"label": "Email Address",
 				"fieldtype": "Data",
 				"insert_after": "primary_contact_phone"
+			},
+			{
+				"fieldname": "address_and_contact",
+				"label": "Address and Contact",
+				"fieldtype": "HTML",
+				"insert_after": "primary_contact_email"
 			}
 		]
 
