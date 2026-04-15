@@ -3,7 +3,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def create_primary_contact_fields():
-	doctypes = ["Project", "Opportunity", "Lead", "Supplier", "Customer"]
+	doctypes = ["Project", "Opportunity", "Lead", "Supplier", "Accounts"]
 
 	# The tab name varies across doctypes. E.g. Supplier has "Contacts & Addresses" tab.
 	# We will try to insert after the respective tab break. If no tab break, just append to top.
@@ -76,11 +76,11 @@ def create_primary_contact_fields():
 def get_insert_after_field(doctype):
 	# Based on standard ERPNext/Frappe field names for the "Contacts & Address" tab
 	tab_map = {
-		"Lead": "tab_contact_info",
-		"Opportunity": "tab_contact_info",
+		"Lead": "custom_contacts__addresses_personal",
+		"Opportunity": "contact_info",
 		"Supplier": "contact_and_address_tab",
-		"Customer": "contact_and_address_tab",
-		"Project": "users_and_contacts_tab", # Typically 'users_tab' or 'users_and_contacts_tab'
+		"Accounts": "contact_and_address_tab",
+		"Project": "custom_contacts__addresses",
 	}
 
 	target_tab = tab_map.get(doctype)
