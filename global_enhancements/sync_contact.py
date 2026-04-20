@@ -1,6 +1,6 @@
 import frappe
 
-PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Lead", "Supplier", "Accounts"]
+PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Lead", "Supplier", "Account"]
 
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
@@ -88,3 +88,11 @@ def sync_from_contact(doc, method):
             if main_changed:
                 main_doc.flags.ignore_permissions = True
                 main_doc.save()
+
+def load_contacts_and_addresses(doc, method=None):
+    try:
+        from frappe.contacts.address_and_contact import load_address_and_contact
+        load_address_and_contact(doc)
+    except Exception as e:
+        frappe.log_error(f"Error loading addresses and contacts for {doc.doctype} {doc.name}: {e}")
+

@@ -1,18 +1,29 @@
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-
 def create_primary_contact_fields():
 	doctypes = ["Project", "Opportunity", "Lead", "Supplier", "Account"]
 
-	# The tab name varies across doctypes. E.g. Supplier has "Contacts & Addresses" tab.
-	# We will try to insert after the respective tab break. If no tab break, just append to top.
-	# Let's inspect the fields first or assume standard tab break names.
-	# The goal is to insert these fields inside the relevant tab.
-	# To make it robust, we will look for a Tab Break or Section Break named similar to Contact/Address.
-
 	for doctype in doctypes:
 		insert_after = get_insert_after_field(doctype)
+		meta = frappe.get_meta(doctype)
+		
+		# We want to put the Enhanced Address & Contact at the bottom of the Contacts tab.
+		tab_name = insert_after
+		found_tab = False
+		last_field_in_tab = tab_name
+		our_fields = ["custom_address_and_contact_section", "custom_address_and_contact_html"]
+		
+		# Find the last standard field in the tab
+		for field in meta.fields:
+			if field.fieldname == tab_name:
+				found_tab = True
+				continue
+			if found_tab:
+				if field.fieldtype == "Tab Break":
+					break
+				if field.fieldname not in our_fields:
+					last_field_in_tab = field.fieldname
 
 		all_fields = [
 			{
@@ -56,14 +67,23 @@ def create_primary_contact_fields():
 				"label": "Address and Contact",
 				"fieldtype": "HTML",
 				"insert_after": "primary_contact_email"
+			},
+			{
+				"fieldname": "custom_address_and_contact_section",
+				"label": "Enhanced Address and Contact",
+				"fieldtype": "Section Break",
+				"insert_after": last_field_in_tab
+			},
+			{
+				"fieldname": "custom_address_and_contact_html",
+				"label": "Address and Contact HTML",
+				"fieldtype": "HTML",
+				"insert_after": "custom_address_and_contact_section"
 			}
 		]
 
 		fields_to_process = []
-		meta = frappe.get_meta(doctype)
 		for field in all_fields:
-			# If the field exists but is NOT a Custom Field, it is a Standard Field.
-			# We must skip it to avoid a validation error during creation.
 			if meta.has_field(field["fieldname"]) and not frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}):
 				continue
 			fields_to_process.append(field)
@@ -72,9 +92,14 @@ def create_primary_contact_fields():
 			custom_fields = {doctype: fields_to_process}
 			create_custom_fields(custom_fields, update=True)
 
+		# FIX TOPOLOGICAL SORTING FOR CUSTOM TABS
+		# If any Tab Break was inserted after `last_field_in_tab`, we need to change its `insert_after` to point to `custom_address_and_contact_html`
+		# so it doesn't interleave its contents into our tab.
+		custom_tabs = frappe.get_all("Custom Field", filters={"dt": doctype, "fieldtype": "Tab Break", "insert_after": last_field_in_tab})
+		for tab in custom_tabs:
+			frappe.db.set_value("Custom Field", tab.name, "insert_after", "custom_address_and_contact_html")
 
 def get_insert_after_field(doctype):
-	# Based on standard ERPNext/Frappe field names for the "Contacts & Address" tab
 	tab_map = {
 		"Lead": "custom_contacts__addresses_personal",
 		"Opportunity": "contact_info",
@@ -87,15 +112,14 @@ def get_insert_after_field(doctype):
 	if target_tab and frappe.get_meta(doctype).has_field(target_tab):
 		return target_tab
 
-	# Fallback: find the first tab that sounds like contacts/addresses
 	meta = frappe.get_meta(doctype)
 	for field in meta.fields:
 		if field.fieldtype == "Tab Break" and any(word in field.label.lower() for word in ["contact", "address"]):
 			return field.fieldname
 
-	# Final fallback
 	for field in meta.fields:
 		if field.fieldtype == "Tab Break":
 			return field.fieldname
 
 	return ""
+
