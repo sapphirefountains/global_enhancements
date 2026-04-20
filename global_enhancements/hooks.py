@@ -38,7 +38,7 @@ doctype_js = {
     "Opportunity": ["public/js/primary_contact.js", "public/js/disable_kanban_drag.js"],
     "Lead": ["public/js/primary_contact.js"],
     "Supplier": ["public/js/primary_contact.js"],
-    "Account": ["public/js/primary_contact.js"]
+    "Accounts": ["public/js/primary_contact.js"]
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -168,8 +168,7 @@ doc_events = {
         "on_update": "global_enhancements.sync_contact.sync_from_contact"
     },
     "Project": {
-        "on_update": "global_enhancements.sync_contact.sync_from_main_doc",
-        "onload": "global_enhancements.sync_contact.load_contacts_and_addresses"
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     },
     "Opportunity": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
@@ -180,9 +179,8 @@ doc_events = {
     "Supplier": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     },
-    "Account": {
-        "on_update": "global_enhancements.sync_contact.sync_from_main_doc",
-        "onload": "global_enhancements.sync_contact.load_contacts_and_addresses"
+    "Accounts": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     }
 }
 
