@@ -1,6 +1,6 @@
 import frappe
 
-PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Lead", "Supplier", "Customer"]
+PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Lead", "Supplier", "Accounts"]
 
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
