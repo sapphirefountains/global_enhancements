@@ -36,11 +36,11 @@ def set_primary_address(account_doctype, account_name, address_name):
     )
     
     if linked_addresses:
-        # Uncheck is_primary for all of them
-        frappe.db.set_value("Address", {"name": ["in", linked_addresses]}, "is_primary", 0)
+        # Uncheck is_primary_address for all of them
+        frappe.db.set_value("Address", {"name": ["in", linked_addresses]}, "is_primary_address", 0)
 
     # Check the new one
-    frappe.db.set_value("Address", address_name, "is_primary", 1)
+    frappe.db.set_value("Address", address_name, "is_primary_address", 1)
 
 @frappe.whitelist()
 def link_existing_record(doctype, docname, link_doctype, link_name):
@@ -113,7 +113,7 @@ def get_addresses_for_context(sources):
     addresses = frappe.get_all(
         "Address",
         filters=[["Dynamic Link", "link_name", "in", source_names]],
-        fields=["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary"]
+        fields=["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary_address"]
     )
     
     unique_addresses = {a.name: a for a in addresses}
