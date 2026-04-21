@@ -119,7 +119,7 @@ global_enhancements.unified_controller = {
 
 		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
 		
-		$('<button class="btn btn-sm btn-default">New Direct Contact</button>')
+		$('<button class="btn btn-sm btn-default">New Contact</button>')
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_contact(frm.doctype, frm.doc.name));
 
@@ -229,7 +229,7 @@ global_enhancements.unified_controller = {
 
 		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
 		
-		$('<button class="btn btn-sm btn-default">New Direct Address</button>')
+		$('<button class="btn btn-sm btn-default">New Address</button>')
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_address(frm.doctype, frm.doc.name));
 
@@ -260,7 +260,7 @@ global_enhancements.unified_controller = {
 							<tr>
 								<th>Address</th>
 								<th>Type</th>
-								<th>City</th>
+								<th>Address Title</th>
 								<th>Linked To</th>
 								<th>Actions</th>
 							</tr>
@@ -285,7 +285,7 @@ global_enhancements.unified_controller = {
 								${is_primary}
 							</td>
 							<td>${a.address_type || ""}</td>
-							<td>${a.city || ""}</td>
+							<td>${a.address_title || ""}</td>
 							<td><span style="font-size: 12px;">${linked_to_links}</span></td>
 							<td>
 								<button class="btn btn-xs btn-default edit-address" data-name="${a.name}" title="Edit">
