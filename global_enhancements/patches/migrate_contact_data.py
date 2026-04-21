@@ -2,7 +2,8 @@ import frappe
 
 def execute():
     """
-    Migrates contact data and preserves primary contact links for Customer and Project records.
+    Migrates contact data, preserves primary contact links, 
+    and migrates data from legacy child tables.
     """
     # 1. Migrate Contact DocType standard fields to custom fields
     contacts = frappe.db.get_all(
@@ -20,82 +21,149 @@ def execute():
         if updates:
             frappe.db.set_value("Contact", c.name, updates, update_modified=False)
 
-    # 2. Customer Migration: Preserve primary_contact links
-    customers = frappe.get_all("Customer", filters={"primary_contact": ["is", "set"]}, fields=["name", "primary_contact"])
-    for customer in customers:
-        ensure_dynamic_link_and_primary(customer.primary_contact, "Customer", customer.name)
+    # Step A: Scalar Field Migration (Customer & Project)
+    migrate_scalar_links("Customer")
+    migrate_scalar_links("Project")
 
-    # 3. Project Migration: Preserve primary_contact links
-    projects = frappe.get_all("Project", filters={"primary_contact": ["is", "set"]}, fields=["name", "primary_contact"])
-    for project in projects:
-        ensure_dynamic_link_and_primary(project.primary_contact, "Project", project.name)
+    # Step B: Child Table Migration (custom_contacts__address_table / Project Stakeholder)
+    migrate_project_stakeholders()
 
-    # 4. Sweep Main DocTypes for orphaned data in old fields
+    # Final Sweep for orphaned data in old fields
+    sweep_orphaned_data()
+
+def migrate_scalar_links(doctype):
+    records = frappe.get_all(doctype, filters={"primary_contact": ["is", "set"]}, fields=["name", "primary_contact"])
+    for doc in records:
+        ensure_dynamic_link_and_primary(doc.primary_contact, doctype, doc.name)
+
+def migrate_project_stakeholders():
+    """Migrates data from tabProject Stakeholder to the new Link-based system."""
+    if not frappe.db.table_exists("Project Stakeholder"):
+        return
+
+    stakeholders = frappe.db.get_all(
+        "Project Stakeholder", 
+        fields=["name", "parent", "parenttype", "contact_person", "address", "role"]
+    )
+
+    for s in stakeholders:
+        # 1. Migrate Contact
+        if s.contact_person:
+            ensure_dynamic_link_and_primary(
+                s.contact_person, 
+                s.parenttype, 
+                s.parent, 
+                is_primary=(s.role == "Primary Contact")
+            )
+            
+            # If primary role, also update parent doc field
+            if s.role == "Primary Contact":
+                try:
+                    parent_doc = frappe.get_doc(s.parenttype, s.parent)
+                    parent_doc.primary_contact = s.contact_person
+                    parent_doc.save(ignore_permissions=True, ignore_links=True)
+                except Exception:
+                    pass
+
+        # 2. Migrate Address
+        if s.address:
+            ensure_address_link(s.address, s.parenttype, s.parent)
+            
+            # If primary role, also update parent doc field
+            if s.role == "Primary Contact":
+                try:
+                    parent_doc = frappe.get_doc(s.parenttype, s.parent)
+                    parent_doc.primary_address = s.address
+                    parent_doc.save(ignore_permissions=True, ignore_links=True)
+                except Exception:
+                    pass
+
+def ensure_dynamic_link_and_primary(contact_name, link_doctype, link_name, is_primary=True):
+    if not frappe.db.exists("Contact", contact_name):
+        return
+
+    try:
+        contact = frappe.get_doc("Contact", contact_name)
+        
+        link_exists = False
+        for link in contact.links:
+            if link.link_doctype == link_doctype and link.link_name == link_name:
+                link_exists = True
+                break
+        
+        changed = False
+        if not link_exists:
+            contact.append("links", {
+                "link_doctype": link_doctype,
+                "link_name": link_name
+            })
+            changed = True
+        
+        if is_primary:
+            contact.is_primary_contact = 1
+            changed = True
+        
+        if changed:
+            contact.save(ignore_permissions=True, ignore_links=True)
+    except Exception:
+        pass
+
+def ensure_address_link(address_name, link_doctype, link_name):
+    if not frappe.db.exists("Address", address_name):
+        return
+
+    try:
+        address = frappe.get_doc("Address", address_name)
+        
+        link_exists = False
+        for link in address.links:
+            if link.link_doctype == link_doctype and link.link_name == link_name:
+                link_exists = True
+                break
+        
+        if not link_exists:
+            address.append("links", {
+                "link_doctype": link_doctype,
+                "link_name": link_name
+            })
+            address.save(ignore_permissions=True, ignore_links=True)
+    except Exception:
+        pass
+
+def sweep_orphaned_data():
     main_doctypes = ["Project", "Opportunity", "Supplier", "Customer"]
     for dt in main_doctypes:
         if not frappe.db.exists("DocType", dt):
             continue
         
         meta = frappe.get_meta(dt)
-        has_phone = meta.has_field("primary_contact_phone")
-        has_email = meta.has_field("primary_contact_email")
-        has_title = meta.has_field("primary_contact_job_title")
-
-        if not (has_phone or has_email or has_title):
+        fields_to_check = {
+            "primary_contact_phone": "custom_phone_number",
+            "primary_contact_email": "custom_email",
+            "primary_contact_job_title": "custom_title"
+        }
+        
+        existing_fields = [f for f in fields_to_check.keys() if meta.has_field(f)]
+        if not existing_fields:
             continue
 
-        fields = ["name", "primary_contact"]
-        if has_phone: fields.append("primary_contact_phone")
-        if has_email: fields.append("primary_contact_email")
-        if has_title: fields.append("primary_contact_job_title")
-
-        docs = frappe.db.get_all(dt, fields=fields)
+        query_fields = ["name", "primary_contact"] + existing_fields
+        docs = frappe.db.get_all(dt, fields=query_fields)
+        
         for doc in docs:
             if not doc.primary_contact:
                 continue
             
             try:
                 contact = frappe.get_doc("Contact", doc.primary_contact)
-                contact_updates = {}
+                changed = False
                 
-                if has_phone and doc.get("primary_contact_phone") and not contact.custom_phone_number:
-                    contact_updates["custom_phone_number"] = doc.primary_contact_phone
+                for old_f, new_f in fields_to_check.items():
+                    if meta.has_field(old_f) and doc.get(old_f) and not contact.get(new_f):
+                        contact.set(new_f, doc.get(old_f))
+                        changed = True
                 
-                if has_email and doc.get("primary_contact_email") and not contact.custom_email:
-                    contact_updates["custom_email"] = doc.primary_contact_email
-                    
-                if has_title and doc.get("primary_contact_job_title") and not contact.custom_title:
-                    contact_updates["custom_title"] = doc.primary_contact_job_title
-                    
-                if contact_updates:
-                    frappe.db.set_value("Contact", contact.name, contact_updates, update_modified=False)
+                if changed:
+                    contact.save(ignore_permissions=True, ignore_links=True)
             except Exception:
                 continue
-
-def ensure_dynamic_link_and_primary(contact_name, link_doctype, link_name):
-    """Ensures a Dynamic Link exists and sets is_primary_contact=1."""
-    if not frappe.db.exists("Contact", contact_name):
-        return
-
-    contact = frappe.get_doc("Contact", contact_name)
-    
-    # Check if link already exists
-    link_exists = False
-    for link in contact.links:
-        if link.link_doctype == link_doctype and link.link_name == link_name:
-            link_exists = True
-            break
-    
-    if not link_exists:
-        contact.append("links", {
-            "link_doctype": link_doctype,
-            "link_name": link_name
-        })
-    
-    contact.is_primary_contact = 1
-    
-    try:
-        contact.save(ignore_permissions=True)
-    except Exception:
-        # Log error or skip if save fails due to other validation errors
-        pass

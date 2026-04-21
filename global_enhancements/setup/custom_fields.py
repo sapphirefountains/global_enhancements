@@ -35,7 +35,7 @@ def create_unified_tabs():
 		# Handle Tab Injection
 		if target_tab:
 			if not meta.has_field(target_tab):
-				# Create the tab if it doesn't exist (Customer/Supplier case)
+				# Create the tab if it doesn't exist
 				last_tab = get_last_tab_fieldname(doctype)
 				fields.append({
 					"fieldname": target_tab,
@@ -86,7 +86,7 @@ def create_unified_tabs():
 					"label": "Primary Address",
 					"fieldtype": "Link",
 					"options": "Address",
-					"insert_after": "section_break_map" # Moved directly into Map section per Phase 5
+					"insert_after": "section_break_map" # Moved directly into Map section
 				},
 				{
 					"fieldname": "section_break_map",
@@ -103,14 +103,13 @@ def create_unified_tabs():
 			])
 
 		# Skip creation if the fieldname already exists (Standard or Custom)
+		# But update insert_after for specific fields if they are custom
 		fields_to_create = []
 		for field in fields:
-			# Special handling for primary_address which we want to update insert_after for
 			if meta.has_field(field["fieldname"]):
-				if field["fieldname"] == "primary_address":
-					# Update custom field if it exists
-					if frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": "primary_address"}):
-						frappe.db.set_value("Custom Field", {"dt": doctype, "fieldname": "primary_address"}, "insert_after", field["insert_after"])
+				# Update custom field properties if it exists as a Custom Field
+				if frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}):
+					frappe.db.set_value("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}, "insert_after", field["insert_after"])
 				continue
 			fields_to_create.append(field)
 
