@@ -391,9 +391,9 @@ global_enhancements.unified_controller = {
 		});
 	},
 
-	create_new_contact: function(link_doctype, link_name) {
+	create_new_contact: function() {
 		frappe.route_options = {
-			"links": [{ "link_doctype": link_doctype, "link_name": link_name }]
+			"links": this.get_base_links()
 		};
 		frappe.ui.form.make_quick_entry('Contact', (doc) => {
 			this.render_contact_table();

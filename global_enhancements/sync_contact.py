@@ -43,21 +43,32 @@ def set_primary_address(account_doctype, account_name, address_name):
     frappe.db.set_value("Address", address_name, "is_primary_address", 1)
 
 @frappe.whitelist()
-def link_existing_record(doctype, docname, link_doctype, link_name):
-    """Links an existing Contact or Address to a document."""
+def link_existing_record(doctype, docname, link_doctype=None, link_name=None, links=None):
+    """Links an existing Contact or Address to a document(s)."""
+    import json
     doc = frappe.get_doc(doctype, docname)
     
-    exists = False
-    for link in doc.links:
-        if link.link_doctype == link_doctype and link.link_name == link_name:
-            exists = True
-            break
+    links_to_add = []
+    if links:
+        if isinstance(links, str):
+            links_to_add = json.loads(links)
+        else:
+            links_to_add = links
+    elif link_doctype and link_name:
+        links_to_add = [{"link_doctype": link_doctype, "link_name": link_name}]
+        
+    changed = False
+    existing_links = set((l.link_doctype, l.link_name) for l in doc.links)
+    
+    for l in links_to_add:
+        if (l.get("link_doctype"), l.get("link_name")) not in existing_links:
+            doc.append("links", {
+                "link_doctype": l.get("link_doctype"),
+                "link_name": l.get("link_name")
+            })
+            changed = True
             
-    if not exists:
-        doc.append("links", {
-            "link_doctype": link_doctype,
-            "link_name": link_name
-        })
+    if changed:
         doc.save(ignore_permissions=True)
     return True
 
