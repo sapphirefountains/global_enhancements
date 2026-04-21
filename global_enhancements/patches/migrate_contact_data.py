@@ -28,6 +28,9 @@ def execute():
     # Step B: Child Table Migration (custom_contacts__address_table / Project Stakeholder)
     migrate_project_stakeholders()
 
+    # Step C: Legacy Address Field Migration
+    migrate_legacy_address_fields()
+
     # Final Sweep for orphaned data in old fields
     sweep_orphaned_data()
 
@@ -35,6 +38,28 @@ def migrate_scalar_links(doctype):
     records = frappe.get_all(doctype, filters={"primary_contact": ["is", "set"]}, fields=["name", "primary_contact"])
     for doc in records:
         ensure_dynamic_link_and_primary(doc.primary_contact, doctype, doc.name)
+
+def migrate_legacy_address_fields():
+    """Migrates custom_customer__lead_address to primary_address for Customer and Lead."""
+    for doctype in ["Customer", "Lead"]:
+        if not frappe.db.exists("DocType", doctype):
+            continue
+            
+        meta = frappe.get_meta(doctype)
+        if meta.has_field("custom_customer__lead_address"):
+            records = frappe.get_all(
+                doctype, 
+                filters={"custom_customer__lead_address": ["is", "set"]}, 
+                fields=["name", "custom_customer__lead_address", "primary_address"]
+            )
+            
+            for doc in records:
+                # Only migrate if primary_address is not already set
+                if not doc.primary_address:
+                    frappe.db.set_value(doctype, doc.name, "primary_address", doc.custom_customer__lead_address, update_modified=False)
+                
+                # Also ensure the Address has a Dynamic Link to this record
+                ensure_address_link(doc.custom_customer__lead_address, doctype, doc.name)
 
 def migrate_project_stakeholders():
     """Migrates data from tabProject Stakeholder to the new Link-based system."""
