@@ -1,57 +1,43 @@
 import frappe
 
-PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Lead", "Supplier", "Customer"]
+PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Supplier", "Customer"]
 
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
         return
 
-    # If the user just selected a new primary contact, don't overwrite the contact
-    # with the old form values that haven't been refreshed yet.
     is_new = getattr(doc, "is_new", None)
     if not (callable(is_new) and is_new()) and not (isinstance(is_new, bool) and is_new):
         old_doc = doc.get_doc_before_save()
         if old_doc and old_doc.primary_contact != doc.primary_contact:
             return
 
-    contact = frappe.get_doc("Contact", doc.primary_contact)
+    try:
+        contact = frappe.get_doc("Contact", doc.primary_contact)
+    except frappe.DoesNotExistError:
+        return
+
     changed = False
 
-    # Note: Full name is intrinsically linked as the link field. We don't try to sync "back"
-    # a changed link field's string to first/last name, as the link field merely references the Contact.
-
-    # Sync Job Title
-    job_title = getattr(doc, "primary_contact_job_title", "") or ""
-    if (contact.custom_title or "") != job_title:
-        contact.custom_title = job_title
+    # Sync Title
+    title = getattr(doc, "primary_contact_job_title", None)
+    if title is not None and (contact.custom_title or "") != title:
+        contact.custom_title = title
         changed = True
 
     # Sync Phone
-    phone = getattr(doc, "primary_contact_phone", "") or ""
-    if phone or (contact.phone and not phone):
-        # Update existing primary phone, or add if it doesn't exist
-        primary_phone_found = False
-        for p in contact.get("phone_nos", []):
-            if p.is_primary_phone:
-                if (p.phone or "") != phone:
-                    p.phone = phone
-                    changed = True
-                primary_phone_found = True
-                break
-
-        if not primary_phone_found and phone:
-            contact.append("phone_nos", {"phone": phone, "is_primary_phone": 1})
-            changed = True
-
-        if (contact.phone or "") != phone:
-            contact.phone = phone
+    phone = getattr(doc, "primary_contact_phone", None)
+    if phone is not None and (contact.custom_phone_number or "") != phone:
+        if phone: # Prevent wiping out contact data during transition
+            contact.custom_phone_number = phone
             changed = True
 
     # Sync Email
-    email = getattr(doc, "primary_contact_email", "") or ""
-    if (contact.custom_email or "") != email:
-        contact.custom_email = email
-        changed = True
+    email = getattr(doc, "primary_contact_email", None)
+    if email is not None and (contact.custom_email or "") != email:
+        if email: # Prevent wiping out contact data during transition
+            contact.custom_email = email
+            changed = True
 
     if changed:
         contact.flags.ignore_permissions = True
@@ -63,26 +49,27 @@ def sync_from_contact(doc, method):
     if getattr(doc.flags, "is_syncing", False):
         return
 
-    job_title = doc.custom_title or ""
-    phone = doc.phone or doc.mobile_no or ""
-    email = doc.custom_email or ""
+    custom_title = doc.custom_title or ""
+    custom_phone = doc.custom_phone_number or ""
+    custom_mobile = doc.custom_mobile_number or ""
+    custom_email = doc.custom_email or ""
+    
+    phone_to_sync = custom_phone or custom_mobile
 
     for dt in PRIMARY_CONTACT_DOCTYPES:
-        # Find all documents linking to this contact
         linked_docs = frappe.get_all(dt, filters={"primary_contact": doc.name})
         for linked in linked_docs:
             main_doc = frappe.get_doc(dt, linked.name)
 
             main_changed = False
-            # Full Name is implicit in the Link field display
-            if main_doc.primary_contact_job_title != job_title:
-                main_doc.primary_contact_job_title = job_title
+            if hasattr(main_doc, "primary_contact_job_title") and main_doc.primary_contact_job_title != custom_title:
+                main_doc.primary_contact_job_title = custom_title
                 main_changed = True
-            if main_doc.primary_contact_phone != phone:
-                main_doc.primary_contact_phone = phone
+            if hasattr(main_doc, "primary_contact_phone") and main_doc.primary_contact_phone != phone_to_sync:
+                main_doc.primary_contact_phone = phone_to_sync
                 main_changed = True
-            if main_doc.primary_contact_email != email:
-                main_doc.primary_contact_email = email
+            if hasattr(main_doc, "primary_contact_email") and main_doc.primary_contact_email != custom_email:
+                main_doc.primary_contact_email = custom_email
                 main_changed = True
 
             if main_changed:
