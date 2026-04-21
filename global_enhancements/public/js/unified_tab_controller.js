@@ -175,12 +175,19 @@ global_enhancements.unified_controller = {
 					const phone = c.custom_phone_number || c.custom_mobile_number || "";
 					const is_primary = c.is_primary_contact ? '<span class="label label-primary" style="margin-left: 5px;">Primary</span>' : '';
 					
+					const contact_url = frappe.urllib.get_full_url(`/app/contact/${c.name}`);
+					const email_link = c.custom_email ? `<a href="mailto:${c.custom_email}">${c.custom_email}</a>` : "";
+					const phone_link = phone ? `<a href="tel:${phone}">${phone}</a>` : "";
+
 					table += `
 						<tr data-name="${c.name}">
-							<td>${full_name}${is_primary}</td>
+							<td>
+								<a href="${contact_url}" target="_blank" style="font-weight: bold;">${full_name}</a>
+								${is_primary}
+							</td>
 							<td>${c.custom_title || ""}</td>
-							<td>${c.custom_email || ""}</td>
-							<td>${phone}</td>
+							<td>${email_link}</td>
+							<td>${phone_link}</td>
 							<td>
 								<button class="btn btn-xs btn-default edit-contact" data-name="${c.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
