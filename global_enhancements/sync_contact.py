@@ -22,6 +22,26 @@ def set_primary_contact(account_doctype, account_name, contact_name):
     # Check the new one
     frappe.db.set_value("Contact", contact_name, "is_primary_contact", 1)
 
+@frappe.whitelist()
+def set_primary_address(account_doctype, account_name, address_name):
+    # Find all addresses linked to this account context
+    linked_addresses = frappe.get_all(
+        "Dynamic Link", 
+        filters={
+            "link_doctype": account_doctype, 
+            "link_name": account_name, 
+            "parenttype": "Address"
+        }, 
+        pluck="parent"
+    )
+    
+    if linked_addresses:
+        # Uncheck is_primary for all of them
+        frappe.db.set_value("Address", {"name": ["in", linked_addresses]}, "is_primary", 0)
+
+    # Check the new one
+    frappe.db.set_value("Address", address_name, "is_primary", 1)
+
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
         return

@@ -45,17 +45,14 @@ global_enhancements.unified_controller = {
 		const frm = this.frm;
 		let sources = [];
 
-		// 1. Add the document itself (direct links)
 		sources.push({ doctype: frm.doctype, name: frm.doc.name });
 
-		// 2. Add standard party fields
 		if (frm.doc.customer) sources.push({ doctype: 'Customer', name: frm.doc.customer });
 		if (frm.doc.supplier) sources.push({ doctype: 'Supplier', name: frm.doc.supplier });
 		if (frm.doc.party_name && frm.doc.party_type) {
 			sources.push({ doctype: frm.doc.party_type, name: frm.doc.party_name });
 		}
 
-		// 3. Scan child tables for links to Customer/Supplier
 		(frm.meta.fields || []).forEach(f => {
 			if (f.fieldtype === "Table" && frm.doc[f.fieldname]) {
 				const grid_rows = frm.doc[f.fieldname];
@@ -69,7 +66,6 @@ global_enhancements.unified_controller = {
 			}
 		});
 
-		// De-duplicate by name
 		const unique_sources = [];
 		const map = new Map();
 		for (const item of sources) {
@@ -84,6 +80,7 @@ global_enhancements.unified_controller = {
 
 	render_all: function() {
 		this.render_contact_table();
+		this.render_address_table();
 		this.render_google_map();
 	},
 
@@ -94,7 +91,10 @@ global_enhancements.unified_controller = {
 			customer: (frm) => this.render_all(),
 			supplier: (frm) => this.render_all(),
 			party_name: (frm) => this.render_all(),
-			primary_address: (frm) => this.render_google_map()
+			primary_address: (frm) => {
+				this.render_google_map();
+				this.render_address_table();
+			}
 		});
 	},
 
@@ -113,15 +113,12 @@ global_enhancements.unified_controller = {
 
 		wrapper.html('<div class="text-muted">Fetching aggregated contacts...</div>');
 
-		// Add "Create New" buttons
 		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
 		
-		// Create button for the main entity or project
 		$('<button class="btn btn-sm btn-default">New Direct Contact</button>')
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_contact(frm.doctype, frm.doc.name));
 
-		// If it's a project with a customer, add button for customer too
 		if (frm.doc.customer) {
 			$(`<button class="btn btn-sm btn-default">Add Contact to ${frm.doc.customer}</button>`)
 				.appendTo(btn_container)
@@ -205,6 +202,129 @@ global_enhancements.unified_controller = {
 		});
 	},
 
+	render_address_table: function() {
+		const frm = this.frm;
+		if (!frm.fields_dict.address_list_html) return;
+
+		const sources = this.get_all_party_sources();
+		const wrapper = $(frm.fields_dict.address_list_html.wrapper);
+		wrapper.empty();
+
+		if (sources.length === 0) {
+			wrapper.html('<div class="alert alert-warning">No linked parties found to display addresses.</div>');
+			return;
+		}
+
+		wrapper.html('<div class="text-muted">Fetching aggregated addresses...</div>');
+
+		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
+		
+		$('<button class="btn btn-sm btn-default">New Direct Address</button>')
+			.appendTo(btn_container)
+			.on('click', () => this.create_new_address(frm.doctype, frm.doc.name));
+
+		if (frm.doc.customer) {
+			$(`<button class="btn btn-sm btn-default">Add Address to ${frm.doc.customer}</button>`)
+				.appendTo(btn_container)
+				.on('click', () => this.create_new_address('Customer', frm.doc.customer));
+		}
+
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Address",
+				filters: [
+					["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
+				],
+				fields: ["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary"]
+			},
+			callback: (r) => {
+				wrapper.find('.text-muted').remove();
+				if (!r.message || r.message.length === 0) {
+					wrapper.append('<div class="alert alert-warning">No addresses linked to any related parties yet.</div>');
+					return;
+				}
+
+				let table = `
+					<table class="table table-bordered table-hover" style="background: white;">
+						<thead>
+							<tr>
+								<th>Address</th>
+								<th>Type</th>
+								<th>City</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+				`;
+
+				r.message.forEach(a => {
+					const full_address = [a.address_line1, a.address_line2].filter(Boolean).join(", ");
+					const is_primary = (a.name === frm.doc.primary_address || a.is_primary) ? `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px; vertical-align: middle;">Primary</span>` : '';
+					const address_url = frappe.urllib.get_full_url(`/app/address/${a.name}`);
+
+					table += `
+						<tr data-name="${a.name}">
+							<td>
+								<a href="${address_url}" target="_blank"><b>${full_address}</b></a>
+								${is_primary}
+							</td>
+							<td>${a.address_type || ""}</td>
+							<td>${a.city || ""}</td>
+							<td>
+								<button class="btn btn-xs btn-default edit-address" data-name="${a.name}" title="Edit">
+									<i class="fa fa-pencil"></i>
+								</button>
+								${frm.doc.primary_address !== a.name ? `
+								<button class="btn btn-xs btn-primary set-primary-address" data-name="${a.name}" style="margin-left: 5px;">
+									Set Primary
+								</button>` : ''}
+							</td>
+						</tr>
+					`;
+				});
+
+				table += '</tbody></table>';
+				wrapper.append(table);
+
+				wrapper.find('.edit-address').on('click', (e) => {
+					const name = $(e.currentTarget).data('name');
+					window.open(frappe.urllib.get_full_url(`/app/address/${name}`), '_blank');
+				});
+
+				wrapper.find('.set-primary-address').on('click', (e) => {
+					const name = $(e.currentTarget).data('name');
+					this.set_primary_address(name);
+				});
+			}
+		});
+	},
+
+	set_primary_address: function(address_name) {
+		const frm = this.frm;
+		const main_party_name = frm.doc.customer || frm.doc.supplier || frm.doc.party_name || frm.doc.name;
+		const main_party_doctype = frm.doc.customer ? 'Customer' : (frm.doc.supplier ? 'Supplier' : (frm.doc.party_type || frm.doctype));
+
+		frappe.confirm(`Set this as primary address for ${main_party_name}?`, () => {
+			frappe.call({
+				method: "global_enhancements.sync_contact.set_primary_address",
+				args: {
+					account_doctype: main_party_doctype,
+					account_name: main_party_name,
+					address_name: address_name
+				},
+				callback: (r) => {
+					frm.set_value('primary_address', address_name);
+					frm.save().done(() => {
+						this.render_address_table();
+						this.render_google_map();
+						frappe.show_alert({message: __("Primary address updated"), indicator: "green"});
+					});
+				}
+			});
+		});
+	},
+
 	set_primary_contact: function(contact_name) {
 		const frm = this.frm;
 		const main_party_name = frm.doc.customer || frm.doc.supplier || frm.doc.party_name || frm.doc.name;
@@ -245,11 +365,6 @@ global_enhancements.unified_controller = {
 		const wrapper = $(frm.fields_dict.location_map_html.wrapper);
 		wrapper.empty();
 
-		const btn_container = $('<div style="margin-bottom: 10px;"></div>').appendTo(wrapper);
-		$('<button class="btn btn-sm btn-default">Create New Address</button>')
-			.appendTo(btn_container)
-			.on('click', () => this.create_new_address());
-
 		const address_name = frm.doc.primary_address;
 		if (!address_name) {
 			wrapper.append('<div class="alert alert-secondary">Select a Primary Address to view the map.</div>');
@@ -269,7 +384,7 @@ global_enhancements.unified_controller = {
 						.filter(Boolean).join(", ");
 					const encoded_address = encodeURIComponent(full_address);
 					wrapper.append(`
-						<div style="width: 100%; height: 400px;">
+						<div style="width: 100%; height: 250px;">
 							<iframe width="100%" height="100%" frameborder="0" style="border:0" 
 								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
 							</iframe>
@@ -280,18 +395,22 @@ global_enhancements.unified_controller = {
 		});
 	},
 
-	create_new_address: function() {
+	create_new_address: function(link_doctype, link_name) {
 		const frm = this.frm;
-		const sources = this.get_all_party_sources();
-		const target = sources.find(s => s.doctype !== frm.doctype) || sources[0];
+		if (!link_doctype || !link_name) {
+			const sources = this.get_all_party_sources();
+			const target = sources.find(s => s.doctype !== frm.doctype) || sources[0];
+			link_doctype = target.doctype;
+			link_name = target.name;
+		}
 
 		frappe.route_options = {
-			"links": [{ "link_doctype": target.doctype, "link_name": target.name }]
+			"links": [{ "link_doctype": link_doctype, "link_name": link_name }]
 		};
 
 		frappe.ui.form.make_quick_entry('Address', (doc) => {
 			frm.set_value('primary_address', doc.name);
-			this.render_google_map();
+			this.render_all();
 		});
 	}
 };

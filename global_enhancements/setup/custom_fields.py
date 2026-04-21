@@ -35,7 +35,6 @@ def create_unified_tabs():
 		# Handle Tab Injection
 		if target_tab:
 			if not meta.has_field(target_tab):
-				# Create the tab if it doesn't exist
 				last_tab = get_last_tab_fieldname(doctype)
 				fields.append({
 					"fieldname": target_tab,
@@ -45,10 +44,8 @@ def create_unified_tabs():
 				})
 				insert_after_contacts = target_tab
 			else:
-				# Use existing tab
 				insert_after_contacts = target_tab
 		else:
-			# Fallback for Contact doctype which doesn't have a tab map entry
 			insert_after_contacts = get_last_tab_fieldname(doctype)
 
 		prev_field = insert_after_contacts
@@ -82,23 +79,40 @@ def create_unified_tabs():
 		if config["addresses"]:
 			fields.extend([
 				{
-					"fieldname": "primary_address",
-					"label": "Primary Address",
-					"fieldtype": "Link",
-					"options": "Address",
-					"insert_after": "section_break_map" # Moved directly into Map section
-				},
-				{
 					"fieldname": "section_break_map",
 					"label": "Location",
 					"fieldtype": "Section Break",
 					"insert_after": prev_field
 				},
 				{
+					"fieldname": "primary_address",
+					"label": "Primary Address",
+					"fieldtype": "Link",
+					"options": "Address",
+					"insert_after": "section_break_map"
+				},
+				{
+					"fieldname": "location_map_col_break",
+					"fieldtype": "Column Break",
+					"insert_after": "primary_address"
+				},
+				{
 					"fieldname": "location_map_html",
 					"label": "Location Map HTML",
 					"fieldtype": "HTML",
-					"insert_after": "section_break_map"
+					"insert_after": "location_map_col_break"
+				},
+				{
+					"fieldname": "section_break_address_list",
+					"label": "Address Directory",
+					"fieldtype": "Section Break",
+					"insert_after": "location_map_html"
+				},
+				{
+					"fieldname": "address_list_html",
+					"label": "Address List HTML",
+					"fieldtype": "HTML",
+					"insert_after": "section_break_address_list"
 				}
 			])
 
@@ -107,7 +121,6 @@ def create_unified_tabs():
 		fields_to_create = []
 		for field in fields:
 			if meta.has_field(field["fieldname"]):
-				# Update custom field properties if it exists as a Custom Field
 				if frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}):
 					frappe.db.set_value("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]}, "insert_after", field["insert_after"])
 				continue
@@ -118,7 +131,6 @@ def create_unified_tabs():
 
 
 def get_last_tab_fieldname(doctype):
-	"""Find the last Tab Break fieldname to insert our new tab after it."""
 	meta = frappe.get_meta(doctype)
 	tabs = [f.fieldname for f in meta.fields if f.fieldtype == "Tab Break"]
 	if tabs:
