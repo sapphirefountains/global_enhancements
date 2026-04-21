@@ -2,6 +2,26 @@ import frappe
 
 PRIMARY_CONTACT_DOCTYPES = ["Project", "Opportunity", "Supplier", "Customer"]
 
+@frappe.whitelist()
+def set_primary_contact(account_doctype, account_name, contact_name):
+    # Find all contacts linked to this account context
+    linked_contacts = frappe.get_all(
+        "Dynamic Link", 
+        filters={
+            "link_doctype": account_doctype, 
+            "link_name": account_name, 
+            "parenttype": "Contact"
+        }, 
+        pluck="parent"
+    )
+    
+    if linked_contacts:
+        # Uncheck is_primary_contact for all of them
+        frappe.db.set_value("Contact", {"name": ["in", linked_contacts]}, "is_primary_contact", 0)
+
+    # Check the new one
+    frappe.db.set_value("Contact", contact_name, "is_primary_contact", 1)
+
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
         return

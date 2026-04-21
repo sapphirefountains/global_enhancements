@@ -191,32 +191,17 @@ global_enhancements.unified_controller = {
 
 		frappe.confirm(`Are you sure you want to set ${contact_name} as the primary contact?`, () => {
 			frappe.call({
-				method: "frappe.client.get_list",
+				method: "global_enhancements.sync_contact.set_primary_contact",
 				args: {
-					doctype: "Contact",
-					filters: [
-						["Dynamic Link", "link_doctype", "=", link_doctype],
-						["Dynamic Link", "link_name", "=", account],
-						["is_primary_contact", "=", 1]
-					],
-					fields: ["name"]
+					account_doctype: link_doctype,
+					account_name: account,
+					contact_name: contact_name
 				},
 				callback: (r) => {
-					const promises = [];
-					if (r.message) {
-						r.message.forEach(old_primary => {
-							promises.push(frappe.db.set_value('Contact', old_primary.name, 'is_primary_contact', 0));
-						});
-					}
-
-					$.when(...promises).done(() => {
-						frappe.db.set_value('Contact', contact_name, 'is_primary_contact', 1).done(() => {
-							frm.set_value('primary_contact', contact_name);
-							frm.save().done(() => {
-								this.render_contact_table();
-								frappe.show_alert({message: __("Primary contact updated"), indicator: "green"});
-							});
-						});
+					frm.set_value('primary_contact', contact_name);
+					frm.save().done(() => {
+						this.render_contact_table();
+						frappe.show_alert({message: __("Primary contact updated"), indicator: "green"});
 					});
 				}
 			});
@@ -228,14 +213,16 @@ global_enhancements.unified_controller = {
 		const account = this.get_account_context();
 		const link_doctype = this.get_link_doctype();
 
-		frappe.new_doc('Contact', {
-			links: [
+		frappe.route_options = {
+			"links": [
 				{
-					link_doctype: link_doctype,
-					link_name: account
+					"link_doctype": link_doctype,
+					"link_name": account
 				}
 			]
-		}, (doc) => {
+		};
+
+		frappe.ui.form.make_quick_entry('Contact', (doc) => {
 			this.render_contact_table();
 		});
 	},
@@ -283,7 +270,7 @@ global_enhancements.unified_controller = {
 								height="100%" 
 								frameborder="0" 
 								style="border:0" 
-								src="https://www.google.com/maps?q=${encoded_address}&output=embed" 
+								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" 
 								allowfullscreen>
 							</iframe>
 						</div>
@@ -299,14 +286,16 @@ global_enhancements.unified_controller = {
 		const account = this.get_account_context();
 		const link_doctype = (frm.doctype === "Contact") ? "Contact" : this.get_link_doctype();
 
-		frappe.new_doc('Address', {
-			links: [
+		frappe.route_options = {
+			"links": [
 				{
-					link_doctype: link_doctype,
-					link_name: account
+					"link_doctype": link_doctype,
+					"link_name": account
 				}
 			]
-		}, (doc) => {
+		};
+
+		frappe.ui.form.make_quick_entry('Address', (doc) => {
 			frm.set_value('primary_address', doc.name);
 			this.render_google_map();
 		});
