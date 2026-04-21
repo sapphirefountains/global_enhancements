@@ -3,7 +3,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def create_primary_contact_fields():
-	doctypes = ["Project", "Opportunity", "Lead", "Supplier", "Account"]
+	doctypes = ["Project", "Opportunity", "Lead", "Supplier", "Customer"]
 
 	# The tab name varies across doctypes. E.g. Supplier has "Contacts & Addresses" tab.
 	# We will try to insert after the respective tab break. If no tab break, just append to top.
@@ -79,7 +79,7 @@ def get_insert_after_field(doctype):
 		"Lead": "custom_contacts__addresses_personal",
 		"Opportunity": "contact_info",
 		"Supplier": "contact_and_address_tab",
-		"Account": "contact_and_address_tab",
+		"Customer": "contact_and_address_tab",
 		"Project": "custom_contacts__addresses",
 	}
 

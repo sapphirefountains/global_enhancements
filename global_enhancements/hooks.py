@@ -38,7 +38,7 @@ doctype_js = {
     "Opportunity": ["public/js/primary_contact.js", "public/js/disable_kanban_drag.js"],
     "Lead": ["public/js/primary_contact.js"],
     "Supplier": ["public/js/primary_contact.js"],
-    "Accounts": ["public/js/primary_contact.js"]
+    "Customer": ["public/js/primary_contact.js"]
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -179,7 +179,7 @@ doc_events = {
     "Supplier": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     },
-    "Accounts": {
+    "Customer": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     }
 }

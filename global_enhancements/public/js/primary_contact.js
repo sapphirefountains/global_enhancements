@@ -1,4 +1,4 @@
-const primary_contact_doctypes = ['Project', 'Opportunity', 'Lead', 'Supplier', 'Accounts'];
+const primary_contact_doctypes = ['Project', 'Opportunity', 'Lead', 'Supplier', 'Customer'];
 
 primary_contact_doctypes.forEach(doctype => {
 	frappe.ui.form.on(doctype, {
