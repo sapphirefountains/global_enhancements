@@ -16,49 +16,81 @@ global_enhancements.unified_controller = {
 
 	setup_queries: function() {
 		const frm = this.frm;
-		const account = this.get_account_context();
+		const sources = this.get_all_party_sources();
 
-		if (!account) return;
+		if (sources.length === 0) return;
+
+		// Build a filter that matches any of our sources in Dynamic Link
+		const contact_filters = [
+			["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
+		];
 
 		if (frm.fields_dict.primary_contact) {
 			frm.set_query("primary_contact", () => {
 				return {
-					filters: [
-						["Dynamic Link", "link_doctype", "=", frm.doctype === "Opportunity" ? "Customer" : frm.doctype],
-						["Dynamic Link", "link_name", "=", account]
-					]
+					query: "global_enhancements.api.get_contact_query", // We'll need a backend query for complex Dynamic Link filtering
+					filters: {
+						sources: sources
+					}
 				};
 			});
+			
+			// Fallback if custom query isn't ready: Simple name-based filter
+			// But for Link fields, we usually need a custom query to filter by Dynamic Link child table
 		}
 
 		if (frm.fields_dict.primary_address) {
 			frm.set_query("primary_address", () => {
 				return {
 					filters: [
-						["Dynamic Link", "link_doctype", "=", frm.doctype === "Opportunity" ? "Customer" : (frm.doctype === "Contact" ? "Contact" : frm.doctype)],
-						["Dynamic Link", "link_name", "=", account]
+						["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
 					]
 				};
 			});
 		}
 	},
 
-	get_account_context: function() {
+	get_all_party_sources: function() {
 		const frm = this.frm;
-		if (frm.doctype === "Customer" || frm.doctype === "Supplier" || frm.doctype === "Contact") {
-			return frm.doc.name;
-		} else if (frm.doctype === "Opportunity") {
-			return frm.doc.party_name;
-		} else if (frm.doctype === "Project") {
-			return frm.doc.customer;
-		}
-		return null;
-	},
+		let sources = [];
 
-	get_link_doctype: function() {
-		const frm = this.frm;
-		if (frm.doctype === "Opportunity") return "Customer";
-		return frm.doctype;
+		// 1. Add the document itself (direct links)
+		sources.push({ doctype: frm.doctype, name: frm.doc.name });
+
+		// 2. Add standard party fields
+		if (frm.doc.customer) sources.push({ doctype: 'Customer', name: frm.doc.customer });
+		if (frm.doc.supplier) sources.push({ doctype: 'Supplier', name: frm.doc.supplier });
+		if (frm.doc.party_name && frm.doc.party_type) {
+			sources.push({ doctype: frm.doc.party_type, name: frm.doc.party_name });
+		}
+
+		// 3. Scan child tables for links to Customer/Supplier
+		// This handles custom multi-party child tables
+		(frm.meta.fields || []).forEach(f => {
+			if (f.fieldtype === "Table" && frm.doc[f.fieldname]) {
+				const grid_rows = frm.doc[f.fieldname];
+				grid_rows.forEach(row => {
+					// Check for common link field names in child tables
+					if (row.customer) sources.push({ doctype: 'Customer', name: row.customer });
+					if (row.supplier) sources.push({ doctype: 'Supplier', name: row.supplier });
+					if (row.party_name && row.party_type) {
+						sources.push({ doctype: row.party_type, name: row.party_name });
+					}
+				});
+			}
+		});
+
+		// De-duplicate by name
+		const unique_sources = [];
+		const map = new Map();
+		for (const item of sources) {
+			if (item.name && !map.has(item.name)) {
+				map.set(item.name, true);
+				unique_sources.push(item);
+			}
+		}
+
+		return unique_sources;
 	},
 
 	render_all: function() {
@@ -68,65 +100,59 @@ global_enhancements.unified_controller = {
 
 	setup_events: function() {
 		const frm = this.frm;
-		// Trigger on account change if applicable
-		const account_field = this.get_account_field();
-		if (account_field) {
-			frappe.ui.form.on(frm.doctype, account_field, (frm) => {
-				this.setup_queries();
-				this.render_all();
-			});
-		}
-
-		// Trigger map on address change
-		if (frm.fields_dict.primary_address) {
-			frappe.ui.form.on(frm.doctype, "primary_address", (frm) => {
-				this.render_google_map();
-			});
-		}
-	},
-
-	get_account_field: function() {
-		const frm = this.frm;
-		if (frm.doctype === "Opportunity") return "party_name";
-		if (frm.doctype === "Project") return "customer";
-		return null;
+		
+		// Re-render if any link fields change
+		frappe.ui.form.on(frm.doctype, {
+			customer: (frm) => this.render_all(),
+			supplier: (frm) => this.render_all(),
+			party_name: (frm) => this.render_all(),
+			primary_address: (frm) => this.render_google_map()
+		});
 	},
 
 	render_contact_table: function() {
 		const frm = this.frm;
 		if (!frm.fields_dict.contact_list_html) return;
 
-		const account = this.get_account_context();
+		const sources = this.get_all_party_sources();
 		const wrapper = $(frm.fields_dict.contact_list_html.wrapper);
 		wrapper.empty();
 
-		if (!account) {
-			wrapper.html('<div class="alert alert-warning">Please select an account to view contacts.</div>');
+		if (sources.length === 0) {
+			wrapper.html('<div class="alert alert-warning">No linked parties found to display contacts.</div>');
 			return;
 		}
 
-		wrapper.html('<div class="text-muted">Fetching contacts...</div>');
+		wrapper.html('<div class="text-muted">Fetching aggregated contacts...</div>');
 
-		// Add "Create New Contact" button
-		const btn_container = $('<div style="margin-bottom: 10px;"></div>').appendTo(wrapper);
-		$('<button class="btn btn-sm btn-default">Create New Contact</button>')
+		// Add "Create New" buttons
+		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
+		
+		// Create button for the main entity or project
+		$('<button class="btn btn-sm btn-default">Add Direct Contact</button>')
 			.appendTo(btn_container)
-			.on('click', () => this.create_new_contact());
+			.on('click', () => this.create_new_contact(frm.doctype, frm.doc.name));
+
+		// If it's a project with a customer, add button for customer too
+		if (frm.doc.customer) {
+			$(`<button class="btn btn-sm btn-default">Add Contact to ${frm.doc.customer}</button>`)
+				.appendTo(btn_container)
+				.on('click', () => this.create_new_contact('Customer', frm.doc.customer));
+		}
 
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
 				doctype: "Contact",
 				filters: [
-					["Dynamic Link", "link_doctype", "=", this.get_link_doctype()],
-					["Dynamic Link", "link_name", "=", account]
+					["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
 				],
 				fields: ["name", "first_name", "last_name", "custom_title", "custom_phone_number", "custom_mobile_number", "custom_email", "is_primary_contact"]
 			},
 			callback: (r) => {
 				wrapper.find('.text-muted').remove();
 				if (!r.message || r.message.length === 0) {
-					wrapper.append('<div class="alert alert-warning">No contacts linked to this account yet.</div>');
+					wrapper.append('<div class="alert alert-warning">No contacts linked to any related parties yet.</div>');
 					return;
 				}
 
@@ -159,10 +185,9 @@ global_enhancements.unified_controller = {
 								<button class="btn btn-xs btn-default edit-contact" data-name="${c.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
 								</button>
-								${!c.is_primary_contact ? `
 								<button class="btn btn-xs btn-primary set-primary-contact" data-name="${c.name}" style="margin-left: 5px;">
 									Set Primary
-								</button>` : ''}
+								</button>
 							</td>
 						</tr>
 					`;
@@ -186,15 +211,17 @@ global_enhancements.unified_controller = {
 
 	set_primary_contact: function(contact_name) {
 		const frm = this.frm;
-		const account = this.get_account_context();
-		const link_doctype = this.get_link_doctype();
+		// When setting primary in a multi-party context, we uncheck others linked to the current document's primary party
+		// For simplicity, we'll use the main party field if available
+		const main_party_name = frm.doc.customer || frm.doc.supplier || frm.doc.party_name || frm.doc.name;
+		const main_party_doctype = frm.doc.customer ? 'Customer' : (frm.doc.supplier ? 'Supplier' : (frm.doc.party_type || frm.doctype));
 
-		frappe.confirm(`Are you sure you want to set ${contact_name} as the primary contact?`, () => {
+		frappe.confirm(`Set ${contact_name} as primary for ${main_party_name}?`, () => {
 			frappe.call({
 				method: "global_enhancements.sync_contact.set_primary_contact",
 				args: {
-					account_doctype: link_doctype,
-					account_name: account,
+					account_doctype: main_party_doctype,
+					account_name: main_party_name,
 					contact_name: contact_name
 				},
 				callback: (r) => {
@@ -208,20 +235,10 @@ global_enhancements.unified_controller = {
 		});
 	},
 
-	create_new_contact: function() {
-		const frm = this.frm;
-		const account = this.get_account_context();
-		const link_doctype = this.get_link_doctype();
-
+	create_new_contact: function(link_doctype, link_name) {
 		frappe.route_options = {
-			"links": [
-				{
-					"link_doctype": link_doctype,
-					"link_name": account
-				}
-			]
+			"links": [{ "link_doctype": link_doctype, "link_name": link_name }]
 		};
-
 		frappe.ui.form.make_quick_entry('Contact', (doc) => {
 			this.render_contact_table();
 		});
@@ -241,7 +258,6 @@ global_enhancements.unified_controller = {
 			.on('click', () => this.create_new_address());
 
 		const address_name = frm.doc.primary_address;
-
 		if (!address_name) {
 			wrapper.append('<div class="alert alert-secondary">Select a Primary Address to view the map.</div>');
 			return;
@@ -251,31 +267,21 @@ global_enhancements.unified_controller = {
 
 		frappe.call({
 			method: "frappe.client.get",
-			args: {
-				doctype: "Address",
-				name: address_name
-			},
+			args: { doctype: "Address", name: address_name },
 			callback: (r) => {
 				wrapper.find('.text-muted').remove();
 				if (r.message) {
 					const addr = r.message;
 					const full_address = [addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode, addr.country]
 						.filter(Boolean).join(", ");
-					
 					const encoded_address = encodeURIComponent(full_address);
-					const iframe = `
+					wrapper.append(`
 						<div style="width: 100%; height: 400px;">
-							<iframe 
-								width="100%" 
-								height="100%" 
-								frameborder="0" 
-								style="border:0" 
-								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" 
-								allowfullscreen>
+							<iframe width="100%" height="100%" frameborder="0" style="border:0" 
+								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
 							</iframe>
 						</div>
-					`;
-					wrapper.append(iframe);
+					`);
 				}
 			}
 		});
@@ -283,16 +289,12 @@ global_enhancements.unified_controller = {
 
 	create_new_address: function() {
 		const frm = this.frm;
-		const account = this.get_account_context();
-		const link_doctype = (frm.doctype === "Contact") ? "Contact" : this.get_link_doctype();
+		const sources = this.get_all_party_sources();
+		// Default to the first non-Project source if possible
+		const target = sources.find(s => s.doctype !== frm.doctype) || sources[0];
 
 		frappe.route_options = {
-			"links": [
-				{
-					"link_doctype": link_doctype,
-					"link_name": account
-				}
-			]
+			"links": [{ "link_doctype": target.doctype, "link_name": target.name }]
 		};
 
 		frappe.ui.form.make_quick_entry('Address', (doc) => {
