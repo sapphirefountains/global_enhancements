@@ -42,6 +42,103 @@ def set_primary_address(account_doctype, account_name, address_name):
     # Check the new one
     frappe.db.set_value("Address", address_name, "is_primary", 1)
 
+@frappe.whitelist()
+def link_existing_record(doctype, docname, link_doctype, link_name):
+    """Links an existing Contact or Address to a document."""
+    doc = frappe.get_doc(doctype, docname)
+    
+    exists = False
+    for link in doc.links:
+        if link.link_doctype == link_doctype and link.link_name == link_name:
+            exists = True
+            break
+            
+    if not exists:
+        doc.append("links", {
+            "link_doctype": link_doctype,
+            "link_name": link_name
+        })
+        doc.save(ignore_permissions=True)
+    return True
+
+@frappe.whitelist()
+def get_contacts_for_context(sources):
+    import json
+    if isinstance(sources, str):
+        sources = json.loads(sources)
+        
+    source_names = [s.get("name") for s in sources]
+    if not source_names:
+        return []
+        
+    contacts = frappe.get_all(
+        "Contact",
+        filters=[["Dynamic Link", "link_name", "in", source_names]],
+        fields=["name", "first_name", "last_name", "custom_title", "custom_phone_number", "custom_mobile_number", "custom_email", "is_primary_contact"]
+    )
+    
+    unique_contacts = {c.name: c for c in contacts}
+    contact_list = list(unique_contacts.values())
+    
+    if not contact_list:
+        return []
+        
+    links = frappe.get_all(
+        "Dynamic Link",
+        filters={"parent": ["in", list(unique_contacts.keys())], "parenttype": "Contact"},
+        fields=["parent", "link_doctype", "link_name"]
+    )
+    
+    link_map = {}
+    for l in links:
+        if l.parent not in link_map:
+            link_map[l.parent] = []
+        link_map[l.parent].append(f"{l.link_name} ({l.link_doctype})")
+        
+    for c in contact_list:
+        c.linked_to = ", ".join(link_map.get(c.name, []))
+        
+    return contact_list
+
+@frappe.whitelist()
+def get_addresses_for_context(sources):
+    import json
+    if isinstance(sources, str):
+        sources = json.loads(sources)
+        
+    source_names = [s.get("name") for s in sources]
+    if not source_names:
+        return []
+        
+    addresses = frappe.get_all(
+        "Address",
+        filters=[["Dynamic Link", "link_name", "in", source_names]],
+        fields=["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary"]
+    )
+    
+    unique_addresses = {a.name: a for a in addresses}
+    address_list = list(unique_addresses.values())
+    
+    if not address_list:
+        return []
+        
+    links = frappe.get_all(
+        "Dynamic Link",
+        filters={"parent": ["in", list(unique_addresses.keys())], "parenttype": "Address"},
+        fields=["parent", "link_doctype", "link_name"]
+    )
+    
+    link_map = {}
+    for l in links:
+        if l.parent not in link_map:
+            link_map[l.parent] = []
+        link_map[l.parent].append(f"{l.link_name} ({l.link_doctype})")
+        
+    for a in address_list:
+        a.linked_to = ", ".join(link_map.get(a.name, []))
+        
+    return address_list
+
 def sync_from_main_doc(doc, method):
     if not getattr(doc, "primary_contact", None):
         return

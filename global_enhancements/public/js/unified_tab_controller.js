@@ -119,21 +119,19 @@ global_enhancements.unified_controller = {
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_contact(frm.doctype, frm.doc.name));
 
+		$('<button class="btn btn-sm btn-default">Link Existing Contact</button>')
+			.appendTo(btn_container)
+			.on('click', () => this.link_existing_record('Contact', frm.doctype, frm.doc.name));
+
 		if (frm.doc.customer) {
-			$(`<button class="btn btn-sm btn-default">Add Contact to ${frm.doc.customer}</button>`)
+			$(`<button class="btn btn-sm btn-default">New Contact for Account: ${frm.doc.customer}</button>`)
 				.appendTo(btn_container)
 				.on('click', () => this.create_new_contact('Customer', frm.doc.customer));
 		}
 
 		frappe.call({
-			method: "frappe.client.get_list",
-			args: {
-				doctype: "Contact",
-				filters: [
-					["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
-				],
-				fields: ["name", "first_name", "last_name", "custom_title", "custom_phone_number", "custom_mobile_number", "custom_email", "is_primary_contact"]
-			},
+			method: "global_enhancements.sync_contact.get_contacts_for_context",
+			args: { sources: sources },
 			callback: (r) => {
 				wrapper.find('.text-muted').remove();
 				if (!r.message || r.message.length === 0) {
@@ -142,6 +140,7 @@ global_enhancements.unified_controller = {
 				}
 
 				let table = `
+					<div class="table-responsive">
 					<table class="table table-bordered table-hover" style="background: white;">
 						<thead>
 							<tr>
@@ -149,6 +148,7 @@ global_enhancements.unified_controller = {
 								<th>Title</th>
 								<th>Email</th>
 								<th>Phone</th>
+								<th>Linked To</th>
 								<th>Actions</th>
 							</tr>
 						</thead>
@@ -174,6 +174,7 @@ global_enhancements.unified_controller = {
 							<td>${c.custom_title || ""}</td>
 							<td>${email_link}</td>
 							<td>${phone_link}</td>
+							<td><span class="text-muted" style="font-size: 12px;">${c.linked_to || ""}</span></td>
 							<td>
 								<button class="btn btn-xs btn-default edit-contact" data-name="${c.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
@@ -223,21 +224,19 @@ global_enhancements.unified_controller = {
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_address(frm.doctype, frm.doc.name));
 
+		$('<button class="btn btn-sm btn-default">Link Existing Address</button>')
+			.appendTo(btn_container)
+			.on('click', () => this.link_existing_record('Address', frm.doctype, frm.doc.name));
+
 		if (frm.doc.customer) {
-			$(`<button class="btn btn-sm btn-default">Add Address to ${frm.doc.customer}</button>`)
+			$(`<button class="btn btn-sm btn-default">New Address for ${frm.doc.customer}</button>`)
 				.appendTo(btn_container)
 				.on('click', () => this.create_new_address('Customer', frm.doc.customer));
 		}
 
 		frappe.call({
-			method: "frappe.client.get_list",
-			args: {
-				doctype: "Address",
-				filters: [
-					["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
-				],
-				fields: ["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary"]
-			},
+			method: "global_enhancements.sync_contact.get_addresses_for_context",
+			args: { sources: sources },
 			callback: (r) => {
 				wrapper.find('.text-muted').remove();
 				if (!r.message || r.message.length === 0) {
@@ -246,12 +245,14 @@ global_enhancements.unified_controller = {
 				}
 
 				let table = `
+					<div class="table-responsive">
 					<table class="table table-bordered table-hover" style="background: white;">
 						<thead>
 							<tr>
 								<th>Address</th>
 								<th>Type</th>
 								<th>City</th>
+								<th>Linked To</th>
 								<th>Actions</th>
 							</tr>
 						</thead>
@@ -271,6 +272,7 @@ global_enhancements.unified_controller = {
 							</td>
 							<td>${a.address_type || ""}</td>
 							<td>${a.city || ""}</td>
+							<td><span class="text-muted" style="font-size: 12px;">${a.linked_to || ""}</span></td>
 							<td>
 								<button class="btn btn-xs btn-default edit-address" data-name="${a.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
@@ -298,6 +300,32 @@ global_enhancements.unified_controller = {
 				});
 			}
 		});
+	},
+
+	link_existing_record: function(doctype, link_doctype, link_name) {
+		frappe.prompt([
+			{
+				label: `Select ${doctype}`,
+				fieldname: 'record',
+				fieldtype: 'Link',
+				options: doctype,
+				reqd: 1
+			}
+		], (values) => {
+			frappe.call({
+				method: "global_enhancements.sync_contact.link_existing_record",
+				args: {
+					doctype: doctype,
+					docname: values.record,
+					link_doctype: link_doctype,
+					link_name: link_name
+				},
+				callback: (r) => {
+					this.render_all();
+					frappe.show_alert({message: `${doctype} linked successfully`, indicator: "green"});
+				}
+			});
+		}, `Link Existing ${doctype}`, 'Link');
 	},
 
 	set_primary_address: function(address_name) {
@@ -373,24 +401,19 @@ global_enhancements.unified_controller = {
 
 		wrapper.append('<div class="text-muted">Loading map...</div>');
 
-		frappe.call({
-			method: "frappe.client.get",
-			args: { doctype: "Address", name: address_name },
-			callback: (r) => {
-				wrapper.find('.text-muted').remove();
-				if (r.message) {
-					const addr = r.message;
-					const full_address = [addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode, addr.country]
-						.filter(Boolean).join(", ");
-					const encoded_address = encodeURIComponent(full_address);
-					wrapper.append(`
-						<div style="width: 100%; height: 250px;">
-							<iframe width="100%" height="100%" frameborder="0" style="border:0" 
-								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
-							</iframe>
-						</div>
-					`);
-				}
+		frappe.db.get_doc("Address", address_name).then((addr) => {
+			wrapper.find('.text-muted').remove();
+			if (addr) {
+				const full_address = [addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode, addr.country]
+					.filter(Boolean).join(", ");
+				const encoded_address = encodeURIComponent(full_address);
+				wrapper.append(`
+					<div style="width: 100%; height: 250px;">
+						<iframe width="100%" height="100%" frameborder="0" style="border:0" 
+							src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
+						</iframe>
+					</div>
+				`);
 			}
 		});
 	},
