@@ -20,23 +20,14 @@ global_enhancements.unified_controller = {
 
 		if (sources.length === 0) return;
 
-		// Build a filter that matches any of our sources in Dynamic Link
-		const contact_filters = [
-			["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
-		];
-
 		if (frm.fields_dict.primary_contact) {
 			frm.set_query("primary_contact", () => {
 				return {
-					query: "global_enhancements.api.get_contact_query", // We'll need a backend query for complex Dynamic Link filtering
-					filters: {
-						sources: sources
-					}
+					filters: [
+						["Dynamic Link", "link_name", "in", sources.map(s => s.name)]
+					]
 				};
 			});
-			
-			// Fallback if custom query isn't ready: Simple name-based filter
-			// But for Link fields, we usually need a custom query to filter by Dynamic Link child table
 		}
 
 		if (frm.fields_dict.primary_address) {
@@ -65,12 +56,10 @@ global_enhancements.unified_controller = {
 		}
 
 		// 3. Scan child tables for links to Customer/Supplier
-		// This handles custom multi-party child tables
 		(frm.meta.fields || []).forEach(f => {
 			if (f.fieldtype === "Table" && frm.doc[f.fieldname]) {
 				const grid_rows = frm.doc[f.fieldname];
 				grid_rows.forEach(row => {
-					// Check for common link field names in child tables
 					if (row.customer) sources.push({ doctype: 'Customer', name: row.customer });
 					if (row.supplier) sources.push({ doctype: 'Supplier', name: row.supplier });
 					if (row.party_name && row.party_type) {
@@ -101,7 +90,6 @@ global_enhancements.unified_controller = {
 	setup_events: function() {
 		const frm = this.frm;
 		
-		// Re-render if any link fields change
 		frappe.ui.form.on(frm.doctype, {
 			customer: (frm) => this.render_all(),
 			supplier: (frm) => this.render_all(),
@@ -129,7 +117,7 @@ global_enhancements.unified_controller = {
 		const btn_container = $('<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>').appendTo(wrapper);
 		
 		// Create button for the main entity or project
-		$('<button class="btn btn-sm btn-default">Add Direct Contact</button>')
+		$('<button class="btn btn-sm btn-default">New Direct Contact</button>')
 			.appendTo(btn_container)
 			.on('click', () => this.create_new_contact(frm.doctype, frm.doc.name));
 
@@ -171,9 +159,10 @@ global_enhancements.unified_controller = {
 				`;
 
 				r.message.forEach(c => {
-					const full_name = [c.first_name, c.last_name].filter(Boolean).join(" ") || c.name;
+					const first_name = c.first_name || "";
+					const last_name = c.last_name || "";
 					const phone = c.custom_phone_number || c.custom_mobile_number || "";
-					const is_primary = c.is_primary_contact ? '<span class="label label-primary" style="margin-left: 5px;">Primary</span>' : '';
+					const is_primary = c.is_primary_contact ? `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px; vertical-align: middle;">Primary</span>` : '';
 					
 					const contact_url = frappe.urllib.get_full_url(`/app/contact/${c.name}`);
 					const email_link = c.custom_email ? `<a href="mailto:${c.custom_email}">${c.custom_email}</a>` : "";
@@ -182,7 +171,7 @@ global_enhancements.unified_controller = {
 					table += `
 						<tr data-name="${c.name}">
 							<td>
-								<a href="${contact_url}" target="_blank" style="font-weight: bold;">${full_name}</a>
+								<a href="${contact_url}" target="_blank"><b>${first_name} ${last_name}</b></a>
 								${is_primary}
 							</td>
 							<td>${c.custom_title || ""}</td>
@@ -218,8 +207,6 @@ global_enhancements.unified_controller = {
 
 	set_primary_contact: function(contact_name) {
 		const frm = this.frm;
-		// When setting primary in a multi-party context, we uncheck others linked to the current document's primary party
-		// For simplicity, we'll use the main party field if available
 		const main_party_name = frm.doc.customer || frm.doc.supplier || frm.doc.party_name || frm.doc.name;
 		const main_party_doctype = frm.doc.customer ? 'Customer' : (frm.doc.supplier ? 'Supplier' : (frm.doc.party_type || frm.doctype));
 
@@ -258,7 +245,6 @@ global_enhancements.unified_controller = {
 		const wrapper = $(frm.fields_dict.location_map_html.wrapper);
 		wrapper.empty();
 
-		// Add "Create New Address" button
 		const btn_container = $('<div style="margin-bottom: 10px;"></div>').appendTo(wrapper);
 		$('<button class="btn btn-sm btn-default">Create New Address</button>')
 			.appendTo(btn_container)
@@ -297,7 +283,6 @@ global_enhancements.unified_controller = {
 	create_new_address: function() {
 		const frm = this.frm;
 		const sources = this.get_all_party_sources();
-		// Default to the first non-Project source if possible
 		const target = sources.find(s => s.doctype !== frm.doctype) || sources[0];
 
 		frappe.route_options = {

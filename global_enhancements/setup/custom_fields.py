@@ -18,20 +18,40 @@ def create_unified_tabs():
 		"Project": {"contacts": True, "addresses": True},
 	}
 
+	tab_map = {
+		"Project": "custom_contacts__addresses",
+		"Opportunity": "contact_info",
+		"Customer": "contacts_and_addresses_tab",
+		"Supplier": "contacts_and_addresses_tab",
+	}
+
 	for doctype, config in matrix.items():
-		insert_after = get_last_tab_fieldname(doctype)
-
+		meta = frappe.get_meta(doctype)
+		target_tab = tab_map.get(doctype)
+		
 		fields = []
+		insert_after_contacts = None
 
-		# ALWAYS INJECT: contacts_and_addresses_tab
-		fields.append({
-			"fieldname": "contacts_and_addresses_tab",
-			"label": "Contacts & Addresses",
-			"fieldtype": "Tab Break",
-			"insert_after": insert_after
-		})
+		# Handle Tab Injection
+		if target_tab:
+			if not meta.has_field(target_tab):
+				# Create the tab if it doesn't exist (Customer/Supplier case)
+				last_tab = get_last_tab_fieldname(doctype)
+				fields.append({
+					"fieldname": target_tab,
+					"label": "Contacts & Addresses",
+					"fieldtype": "Tab Break",
+					"insert_after": last_tab
+				})
+				insert_after_contacts = target_tab
+			else:
+				# Use existing tab
+				insert_after_contacts = target_tab
+		else:
+			# Fallback for Contact doctype which doesn't have a tab map entry
+			insert_after_contacts = get_last_tab_fieldname(doctype)
 
-		prev_field = "contacts_and_addresses_tab"
+		prev_field = insert_after_contacts
 
 		# IF Contacts (Y)
 		if config["contacts"]:
@@ -66,13 +86,13 @@ def create_unified_tabs():
 					"label": "Primary Address",
 					"fieldtype": "Link",
 					"options": "Address",
-					"insert_after": prev_field
+					"insert_after": "section_break_map" # Moved directly into Map section per Phase 5
 				},
 				{
 					"fieldname": "section_break_map",
 					"label": "Location",
 					"fieldtype": "Section Break",
-					"insert_after": "primary_address"
+					"insert_after": prev_field
 				},
 				{
 					"fieldname": "location_map_html",
@@ -84,9 +104,13 @@ def create_unified_tabs():
 
 		# Skip creation if the fieldname already exists (Standard or Custom)
 		fields_to_create = []
-		meta = frappe.get_meta(doctype)
 		for field in fields:
+			# Special handling for primary_address which we want to update insert_after for
 			if meta.has_field(field["fieldname"]):
+				if field["fieldname"] == "primary_address":
+					# Update custom field if it exists
+					if frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": "primary_address"}):
+						frappe.db.set_value("Custom Field", {"dt": doctype, "fieldname": "primary_address"}, "insert_after", field["insert_after"])
 				continue
 			fields_to_create.append(field)
 
@@ -104,5 +128,4 @@ def get_last_tab_fieldname(doctype):
 
 
 def create_primary_contact_fields():
-	# Keep this for backward compatibility if needed, but redirects to the new logic
 	create_unified_tabs()
