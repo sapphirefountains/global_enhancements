@@ -31,9 +31,56 @@ def execute():
     # Step C: Legacy Address Field Migration
     migrate_legacy_address_fields()
     migrate_customer_specific_address_fields()
+    migrate_supplier_specific_address_fields()
+    migrate_contact_address_fields()
 
     # Final Sweep for orphaned data in old fields
     sweep_orphaned_data()
+
+def migrate_supplier_specific_address_fields():
+    """Migrates supplier_primary_address to the Address Directory."""
+    if not frappe.db.exists("DocType", "Supplier"):
+        return
+        
+    meta = frappe.get_meta("Supplier")
+    
+    if not meta.has_field("supplier_primary_address"):
+        return
+        
+    records = frappe.db.get_all("Supplier", fields=["name", "primary_address", "supplier_primary_address"])
+    
+    for doc in records:
+        primary_addr_val = doc.get("supplier_primary_address")
+        
+        if primary_addr_val:
+            # Set on Supplier if not already set
+            if meta.has_field("primary_address") and not doc.primary_address:
+                frappe.db.set_value("Supplier", doc.name, "primary_address", primary_addr_val, update_modified=False)
+            
+            # Ensure Address has a dynamic link
+            ensure_address_link_and_type(primary_addr_val, "Supplier", doc.name, is_primary=True)
+
+def migrate_contact_address_fields():
+    """Migrates 'address' field in Contact to 'primary_address'."""
+    if not frappe.db.exists("DocType", "Contact"):
+        return
+        
+    meta = frappe.get_meta("Contact")
+    if not meta.has_field("address") or not meta.has_field("primary_address"):
+        return
+        
+    contacts = frappe.db.get_all(
+        "Contact", 
+        filters={"address": ["is", "set"]}, 
+        fields=["name", "address", "primary_address"]
+    )
+    
+    for c in contacts:
+        if not c.primary_address:
+            frappe.db.set_value("Contact", c.name, "primary_address", c.address, update_modified=False)
+        
+        # Ensure Address has a dynamic link to this Contact
+        ensure_address_link_and_type(c.address, "Contact", c.name, is_primary=True)
 
 def migrate_customer_specific_address_fields():
     """Migrates custom_billing_address, custom_shipping_address, and customer_primary_address to the Address Directory."""

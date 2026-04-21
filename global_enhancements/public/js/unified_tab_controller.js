@@ -62,6 +62,10 @@ global_enhancements.unified_controller = {
 					if (row.party_name && row.party_type) {
 						sources.push({ doctype: row.party_type, name: row.party_name });
 					}
+					// Handle standard Dynamic Link child table fields (link_doctype, link_name)
+					if (row.link_doctype && row.link_name) {
+						sources.push({ doctype: row.link_doctype, name: row.link_name });
+					}
 				});
 			}
 		});
@@ -403,7 +407,7 @@ global_enhancements.unified_controller = {
 		const wrapper = $(frm.fields_dict.location_map_html.wrapper);
 		wrapper.empty();
 
-		const address_name = frm.doc.primary_address;
+		const address_name = frm.doc.primary_address || frm.doc.supplier_primary_address || frm.doc.customer_primary_address;
 		if (!address_name) {
 			wrapper.append('<div class="alert alert-secondary">Select a Primary Address to view the map.</div>');
 			return;
@@ -414,7 +418,7 @@ global_enhancements.unified_controller = {
 		frappe.db.get_doc("Address", address_name).then((addr) => {
 			wrapper.find('.text-muted').remove();
 			if (addr) {
-				const full_address = [addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode, addr.country]
+				const full_address = addr.custom_full_address || [addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode, addr.country]
 					.filter(Boolean).join(", ");
 				const encoded_address = encodeURIComponent(full_address);
 				wrapper.append(`
