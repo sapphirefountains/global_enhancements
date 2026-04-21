@@ -93,10 +93,10 @@ def get_contacts_for_context(sources):
     for l in links:
         if l.parent not in link_map:
             link_map[l.parent] = []
-        link_map[l.parent].append(f"{l.link_name} ({l.link_doctype})")
+        link_map[l.parent].append({"name": l.link_name, "doctype": l.link_doctype})
         
     for c in contact_list:
-        c.linked_to = ", ".join(link_map.get(c.name, []))
+        c.links = link_map.get(c.name, [])
         
     return contact_list
 
@@ -132,10 +132,10 @@ def get_addresses_for_context(sources):
     for l in links:
         if l.parent not in link_map:
             link_map[l.parent] = []
-        link_map[l.parent].append(f"{l.link_name} ({l.link_doctype})")
+        link_map[l.parent].append({"name": l.link_name, "doctype": l.link_doctype})
         
     for a in address_list:
-        a.linked_to = ", ".join(link_map.get(a.name, []))
+        a.links = link_map.get(a.name, [])
         
     return address_list
 

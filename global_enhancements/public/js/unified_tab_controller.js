@@ -165,6 +165,11 @@ global_enhancements.unified_controller = {
 					const email_link = c.custom_email ? `<a href="mailto:${c.custom_email}">${c.custom_email}</a>` : "";
 					const phone_link = phone ? `<a href="tel:${phone}">${phone}</a>` : "";
 
+					const linked_to_links = (c.links || []).map(l => {
+						const url = frappe.urllib.get_full_url(`/app/${frappe.router.slug(l.doctype)}/${l.name}`);
+						return `<a href="${url}" target="_blank">${l.name} (${l.doctype})</a>`;
+					}).join(", ");
+
 					table += `
 						<tr data-name="${c.name}">
 							<td>
@@ -174,7 +179,7 @@ global_enhancements.unified_controller = {
 							<td>${c.custom_title || ""}</td>
 							<td>${email_link}</td>
 							<td>${phone_link}</td>
-							<td><span class="text-muted" style="font-size: 12px;">${c.linked_to || ""}</span></td>
+							<td><span style="font-size: 12px;">${linked_to_links}</span></td>
 							<td>
 								<button class="btn btn-xs btn-default edit-contact" data-name="${c.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
@@ -264,6 +269,11 @@ global_enhancements.unified_controller = {
 					const is_primary = (a.name === frm.doc.primary_address || a.is_primary_address) ? `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px; vertical-align: middle;">Primary</span>` : '';
 					const address_url = frappe.urllib.get_full_url(`/app/address/${a.name}`);
 
+					const linked_to_links = (a.links || []).map(l => {
+						const url = frappe.urllib.get_full_url(`/app/${frappe.router.slug(l.doctype)}/${l.name}`);
+						return `<a href="${url}" target="_blank">${l.name} (${l.doctype})</a>`;
+					}).join(", ");
+
 					table += `
 						<tr data-name="${a.name}">
 							<td>
@@ -272,7 +282,7 @@ global_enhancements.unified_controller = {
 							</td>
 							<td>${a.address_type || ""}</td>
 							<td>${a.city || ""}</td>
-							<td><span class="text-muted" style="font-size: 12px;">${a.linked_to || ""}</span></td>
+							<td><span style="font-size: 12px;">${linked_to_links}</span></td>
 							<td>
 								<button class="btn btn-xs btn-default edit-address" data-name="${a.name}" title="Edit">
 									<i class="fa fa-pencil"></i>
