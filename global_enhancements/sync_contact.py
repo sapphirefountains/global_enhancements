@@ -113,7 +113,7 @@ def get_addresses_for_context(sources):
     addresses = frappe.get_all(
         "Address",
         filters=[["Dynamic Link", "link_name", "in", source_names]],
-        fields=["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary_address"]
+        fields=["name", "address_type", "address_line1", "address_line2", "city", "state", "pincode", "country", "is_primary_address", "custom_full_address"]
     )
     
     unique_addresses = {a.name: a for a in addresses}

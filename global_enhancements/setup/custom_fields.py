@@ -28,6 +28,10 @@ def create_unified_tabs():
 	for doctype, config in matrix.items():
 		meta = frappe.get_meta(doctype)
 		target_tab = tab_map.get(doctype)
+
+		if not target_tab and doctype == "Contact":
+			# Try to find the 'Details' tab for Contact
+			target_tab = next((f.fieldname for f in meta.fields if f.fieldtype == "Tab Break" and f.label == "Details"), None)
 		
 		fields = []
 		insert_after_contacts = None

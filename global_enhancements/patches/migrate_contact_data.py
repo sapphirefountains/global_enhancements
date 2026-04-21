@@ -30,9 +30,57 @@ def execute():
 
     # Step C: Legacy Address Field Migration
     migrate_legacy_address_fields()
+    migrate_customer_specific_address_fields()
 
     # Final Sweep for orphaned data in old fields
     sweep_orphaned_data()
+
+def migrate_customer_specific_address_fields():
+    """Migrates custom_billing_address, custom_shipping_address, and customer_primary_address to the Address Directory."""
+    if not frappe.db.exists("DocType", "Customer"):
+        return
+        
+    meta = frappe.get_meta("Customer")
+    
+    # Identify which fields actually exist in the current meta
+    address_fields = []
+    if meta.has_field("customer_primary_address"): address_fields.append("customer_primary_address")
+    if meta.has_field("custom_billing_address"): address_fields.append("custom_billing_address")
+    if meta.has_field("custom_shipping_address"): address_fields.append("custom_shipping_address")
+    
+    if not address_fields:
+        return
+        
+    # Query only if at least one of these fields exists
+    fields_to_query = ["name", "primary_address"] + address_fields
+    
+    # We want records where at least one of these address fields is set
+    # Since frappe.get_all doesn't support complex OR conditions natively in a simple way, 
+    # we'll just fetch all and filter in Python, or use an OR filter if Frappe version supports it.
+    # Fetching all customers with any of these fields populated:
+    records = frappe.db.get_all("Customer", fields=fields_to_query)
+    
+    for doc in records:
+        primary_addr_val = doc.get("customer_primary_address")
+        billing_addr_val = doc.get("custom_billing_address")
+        shipping_addr_val = doc.get("custom_shipping_address")
+        
+        # 1. Primary Address
+        if primary_addr_val:
+            # Set on Customer if not already set
+            if meta.has_field("primary_address") and not doc.primary_address:
+                frappe.db.set_value("Customer", doc.name, "primary_address", primary_addr_val, update_modified=False)
+            
+            # Ensure Address has a dynamic link
+            ensure_address_link_and_type(primary_addr_val, "Customer", doc.name, is_primary=True)
+            
+        # 2. Billing Address
+        if billing_addr_val:
+            ensure_address_link_and_type(billing_addr_val, "Customer", doc.name, address_type="Billing")
+            
+        # 3. Shipping Address
+        if shipping_addr_val:
+            ensure_address_link_and_type(shipping_addr_val, "Customer", doc.name, address_type="Shipping")
 
 def migrate_scalar_links(doctype):
     records = frappe.get_all(doctype, filters={"primary_contact": ["is", "set"]}, fields=["name", "primary_contact"])
@@ -130,6 +178,40 @@ def ensure_dynamic_link_and_primary(contact_name, link_doctype, link_name, is_pr
         
         if changed:
             contact.save(ignore_permissions=True, ignore_links=True)
+    except Exception:
+        pass
+
+def ensure_address_link_and_type(address_name, link_doctype, link_name, address_type=None, is_primary=False):
+    if not frappe.db.exists("Address", address_name):
+        return
+
+    try:
+        address = frappe.get_doc("Address", address_name)
+        
+        link_exists = False
+        for link in address.links:
+            if link.link_doctype == link_doctype and link.link_name == link_name:
+                link_exists = True
+                break
+        
+        changed = False
+        if not link_exists:
+            address.append("links", {
+                "link_doctype": link_doctype,
+                "link_name": link_name
+            })
+            changed = True
+            
+        if address_type and address.address_type != address_type:
+            address.address_type = address_type
+            changed = True
+            
+        if is_primary and not address.is_primary_address:
+            address.is_primary_address = 1
+            changed = True
+            
+        if changed:
+            address.save(ignore_permissions=True, ignore_links=True)
     except Exception:
         pass
 

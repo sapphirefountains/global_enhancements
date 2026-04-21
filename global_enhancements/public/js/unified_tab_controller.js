@@ -260,7 +260,7 @@ global_enhancements.unified_controller = {
 				`;
 
 				r.message.forEach(a => {
-					const full_address = [a.address_line1, a.address_line2].filter(Boolean).join(", ");
+					const full_address = a.custom_full_address || [a.address_line1, a.address_line2].filter(Boolean).join(", ");
 					const is_primary = (a.name === frm.doc.primary_address || a.is_primary_address) ? `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px; vertical-align: middle;">Primary</span>` : '';
 					const address_url = frappe.urllib.get_full_url(`/app/address/${a.name}`);
 
