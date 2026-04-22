@@ -129,21 +129,9 @@ global_enhancements.unified_controller = {
 			'<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>',
 		).appendTo(wrapper);
 
-		$('<button class="btn btn-sm btn-default">New Contact</button>')
+		$('<button class="btn btn-sm btn-default">Add Contact</button>')
 			.appendTo(btn_container)
-			.on("click", () => this.create_new_contact(frm.doctype, frm.doc.name));
-
-		$('<button class="btn btn-sm btn-default">Link Existing Contact</button>')
-			.appendTo(btn_container)
-			.on("click", () => this.link_existing_record("Contact", frm.doctype, frm.doc.name));
-
-		if (frm.doc.customer) {
-			$(
-				`<button class="btn btn-sm btn-default">New Contact for Account: ${frm.doc.customer}</button>`,
-			)
-				.appendTo(btn_container)
-				.on("click", () => this.create_new_contact("Customer", frm.doc.customer));
-		}
+			.on("click", () => this.link_existing_record("Contact"));
 
 		frappe.call({
 			method: "global_enhancements.sync_contact.get_contacts_for_context",
@@ -255,21 +243,9 @@ global_enhancements.unified_controller = {
 			'<div style="margin-bottom: 10px; display: flex; gap: 10px;"></div>',
 		).appendTo(wrapper);
 
-		$('<button class="btn btn-sm btn-default">New Address</button>')
+		$('<button class="btn btn-sm btn-default">Add Address</button>')
 			.appendTo(btn_container)
-			.on("click", () => this.create_new_address(frm.doctype, frm.doc.name));
-
-		$('<button class="btn btn-sm btn-default">Link Existing Address</button>')
-			.appendTo(btn_container)
-			.on("click", () => this.link_existing_record("Address", frm.doctype, frm.doc.name));
-
-		if (frm.doc.customer) {
-			$(
-				`<button class="btn btn-sm btn-default">New Address for ${frm.doc.customer}</button>`,
-			)
-				.appendTo(btn_container)
-				.on("click", () => this.create_new_address("Customer", frm.doc.customer));
-		}
+			.on("click", () => this.link_existing_record("Address"));
 
 		frappe.call({
 			method: "global_enhancements.sync_contact.get_addresses_for_context",
@@ -359,7 +335,7 @@ global_enhancements.unified_controller = {
 		});
 	},
 
-	link_existing_record: function (doctype, link_doctype, link_name) {
+	link_existing_record: function (doctype) {
 		frappe.prompt(
 			[
 				{
@@ -376,8 +352,7 @@ global_enhancements.unified_controller = {
 					args: {
 						doctype: doctype,
 						docname: values.record,
-						link_doctype: link_doctype,
-						link_name: link_name,
+						links: JSON.stringify(this.get_base_links()),
 					},
 					callback: (r) => {
 						this.render_all();
@@ -388,8 +363,8 @@ global_enhancements.unified_controller = {
 					},
 				});
 			},
-			`Link Existing ${doctype}`,
-			"Link",
+			`Add ${doctype}`,
+			"Add",
 		);
 	},
 
@@ -458,23 +433,6 @@ global_enhancements.unified_controller = {
 		});
 	},
 
-	create_new_contact: function (link_doctype, link_name) {
-		const frm = this.frm;
-		if (!link_doctype || !link_name) {
-			frappe.route_options = {
-				links: this.get_base_links(),
-			};
-		} else {
-			frappe.route_options = {
-				links: [{ link_doctype: link_doctype, link_name: link_name }],
-			};
-		}
-
-		frappe.ui.form.make_quick_entry("Contact", (doc) => {
-			this.render_contact_table();
-		});
-	},
-
 	get_base_links: function () {
 		const sources = this.get_all_party_sources();
 		return sources.map((s) => ({
@@ -527,24 +485,6 @@ global_enhancements.unified_controller = {
 					</div>
 				`);
 			}
-		});
-	},
-
-	create_new_address: function (link_doctype, link_name) {
-		const frm = this.frm;
-		if (!link_doctype || !link_name) {
-			frappe.route_options = {
-				links: this.get_base_links(),
-			};
-		} else {
-			frappe.route_options = {
-				links: [{ link_doctype: link_doctype, link_name: link_name }],
-			};
-		}
-
-		frappe.ui.form.make_quick_entry("Address", (doc) => {
-			frm.set_value("primary_address", doc.name);
-			this.render_all();
 		});
 	},
 };
