@@ -461,18 +461,26 @@ global_enhancements.unified_controller = {
 	create_new_contact: function (link_doctype, link_name) {
 		const frm = this.frm;
 		if (!link_doctype || !link_name) {
-			const sources = this.get_all_party_sources();
-			const target = sources.find((s) => s.doctype !== frm.doctype) || sources[0];
-			link_doctype = target.doctype;
-			link_name = target.name;
+			frappe.route_options = {
+				links: this.get_base_links(),
+			};
+		} else {
+			frappe.route_options = {
+				links: [{ link_doctype: link_doctype, link_name: link_name }],
+			};
 		}
 
-		frappe.route_options = {
-			links: [{ link_doctype: link_doctype, link_name: link_name }],
-		};
 		frappe.ui.form.make_quick_entry("Contact", (doc) => {
 			this.render_contact_table();
 		});
+	},
+
+	get_base_links: function () {
+		const sources = this.get_all_party_sources();
+		return sources.map((s) => ({
+			link_doctype: s.doctype,
+			link_name: s.name,
+		}));
 	},
 
 	render_google_map: function () {
@@ -525,15 +533,14 @@ global_enhancements.unified_controller = {
 	create_new_address: function (link_doctype, link_name) {
 		const frm = this.frm;
 		if (!link_doctype || !link_name) {
-			const sources = this.get_all_party_sources();
-			const target = sources.find((s) => s.doctype !== frm.doctype) || sources[0];
-			link_doctype = target.doctype;
-			link_name = target.name;
+			frappe.route_options = {
+				links: this.get_base_links(),
+			};
+		} else {
+			frappe.route_options = {
+				links: [{ link_doctype: link_doctype, link_name: link_name }],
+			};
 		}
-
-		frappe.route_options = {
-			links: [{ link_doctype: link_doctype, link_name: link_name }],
-		};
 
 		frappe.ui.form.make_quick_entry("Address", (doc) => {
 			frm.set_value("primary_address", doc.name);
