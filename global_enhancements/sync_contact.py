@@ -73,6 +73,28 @@ def link_existing_record(doctype, docname, link_doctype=None, link_name=None, li
     return True
 
 @frappe.whitelist()
+def unlink_record(doctype, docname, link_doctype, link_name):
+    """Unlinks a Contact or Address from a specific document."""
+    doc = frappe.get_doc(doctype, docname)
+    
+    new_links = []
+    found = False
+    for l in doc.links:
+        if l.link_doctype == link_doctype and l.link_name == link_name:
+            found = True
+            continue
+        new_links.append({
+            "link_doctype": l.link_doctype,
+            "link_name": l.link_name
+        })
+            
+    if found:
+        doc.set("links", new_links)
+        doc.save(ignore_permissions=True)
+        return True
+    return False
+
+@frappe.whitelist()
 def get_contacts_for_context(sources):
     import json
     if isinstance(sources, str):

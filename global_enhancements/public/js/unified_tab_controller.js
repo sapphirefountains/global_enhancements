@@ -201,6 +201,9 @@ global_enhancements.unified_controller = {
 								<button class="btn btn-xs btn-primary set-primary-contact" data-name="${c.name}" style="margin-left: 5px;">
 									Set Primary
 								</button>
+								<button class="btn btn-xs btn-danger unlink-contact" data-name="${c.name}" style="margin-left: 5px;" title="Unlink">
+									<i class="fa fa-unlink"></i>
+								</button>
 							</td>
 						</tr>
 					`;
@@ -217,6 +220,11 @@ global_enhancements.unified_controller = {
 				wrapper.find(".set-primary-contact").on("click", (e) => {
 					const name = $(e.currentTarget).data("name");
 					this.set_primary_contact(name);
+				});
+
+				wrapper.find(".unlink-contact").on("click", (e) => {
+					const name = $(e.currentTarget).data("name");
+					this.unlink_record("Contact", name);
 				});
 			},
 		});
@@ -314,6 +322,9 @@ global_enhancements.unified_controller = {
 								</button>`
 										: ""
 								}
+								<button class="btn btn-xs btn-danger unlink-address" data-name="${a.name}" style="margin-left: 5px;" title="Unlink">
+									<i class="fa fa-unlink"></i>
+								</button>
 							</td>
 						</tr>
 					`;
@@ -330,6 +341,11 @@ global_enhancements.unified_controller = {
 				wrapper.find(".set-primary-address").on("click", (e) => {
 					const name = $(e.currentTarget).data("name");
 					this.set_primary_address(name);
+				});
+
+				wrapper.find(".unlink-address").on("click", (e) => {
+					const name = $(e.currentTarget).data("name");
+					this.unlink_record("Address", name);
 				});
 			},
 		});
@@ -441,6 +457,30 @@ global_enhancements.unified_controller = {
 		}));
 	},
 
+	unlink_record: function (doctype, docname) {
+		const frm = this.frm;
+		frappe.confirm(`Are you sure you want to unlink this ${doctype} from this document?`, () => {
+			frappe.call({
+				method: "global_enhancements.sync_contact.unlink_record",
+				args: {
+					doctype: doctype,
+					docname: docname,
+					link_doctype: frm.doctype,
+					link_name: frm.doc.name,
+				},
+				callback: (r) => {
+					if (r.message) {
+						this.render_all();
+						frappe.show_alert({
+							message: `${doctype} unlinked successfully`,
+							indicator: "green",
+						});
+					}
+				},
+			});
+		});
+	},
+
 	render_google_map: function () {
 		const frm = this.frm;
 		if (!frm.fields_dict.location_map_html) return;
@@ -450,8 +490,8 @@ global_enhancements.unified_controller = {
 
 		const address_name =
 			frm.doc.primary_address ||
-			frm.doc.supplier_primary_address ||
-			frm.doc.customer_primary_address;
+			frm.doc.customer_address ||
+			frm.doc.supplier_address;
 		if (!address_name) {
 			wrapper.append(
 				'<div class="alert alert-secondary">Select a Primary Address to view the map.</div>',
@@ -459,32 +499,50 @@ global_enhancements.unified_controller = {
 			return;
 		}
 
+		// Ensure it's not an HTML string fallback by mistake (basic sanity check)
+		if (address_name.includes('<br>') || address_name.includes('\n')) {
+			wrapper.append(
+				'<div class="alert alert-warning">Invalid address reference format.</div>',
+			);
+			return;
+		}
+
 		wrapper.append('<div class="text-muted">Loading map...</div>');
 
-		frappe.db.get_doc("Address", address_name).then((addr) => {
-			wrapper.find(".text-muted").remove();
-			if (addr) {
-				const full_address =
-					addr.custom_full_address ||
-					[
-						addr.address_line1,
-						addr.address_line2,
-						addr.city,
-						addr.state,
-						addr.pincode,
-						addr.country,
-					]
-						.filter(Boolean)
-						.join(", ");
-				const encoded_address = encodeURIComponent(full_address);
-				wrapper.append(`
-					<div style="width: 100%; height: 250px;">
-						<iframe width="100%" height="100%" frameborder="0" style="border:0" 
-							src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
-						</iframe>
-					</div>
-				`);
+		frappe.db.exists("Address", address_name).then((exists) => {
+			if (!exists) {
+				wrapper.find(".text-muted").remove();
+				wrapper.append(
+					'<div class="alert alert-warning">Primary Address record not found or invalid.</div>',
+				);
+				return;
 			}
+
+			frappe.db.get_doc("Address", address_name).then((addr) => {
+				wrapper.find(".text-muted").remove();
+				if (addr) {
+					const full_address =
+						addr.custom_full_address ||
+						[
+							addr.address_line1,
+							addr.address_line2,
+							addr.city,
+							addr.state,
+							addr.pincode,
+							addr.country,
+						]
+							.filter(Boolean)
+							.join(", ");
+					const encoded_address = encodeURIComponent(full_address);
+					wrapper.append(`
+						<div style="width: 100%; height: 250px;">
+							<iframe width="100%" height="100%" frameborder="0" style="border:0" 
+								src="https://maps.google.com/maps?q=${encoded_address}&output=embed" allowfullscreen>
+							</iframe>
+						</div>
+					`);
+				}
+			});
 		});
 	},
 };
