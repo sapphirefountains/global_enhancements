@@ -41,7 +41,9 @@ doctype_js = {
     "Customer": ["public/js/unified_tab_controller.js"],
     "Contact": ["public/js/unified_tab_controller.js"]
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+	"Supplier": "public/js/supplier_list.js"
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
@@ -102,7 +104,10 @@ doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 
 # before_install = "global_enhancements.install.before_install"
 # after_install = "global_enhancements.install.after_install"
-after_migrate = "global_enhancements.setup.custom_fields.create_unified_tabs"
+after_migrate = [
+	"global_enhancements.setup.custom_fields.create_unified_tabs",
+	"global_enhancements.setup.supplier_groups.create_supplier_group_customizations"
+]
 
 # Uninstallation
 # ------------
@@ -175,9 +180,9 @@ doc_events = {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     },
     "Supplier": {
-        "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
-    },
-    "Customer": {
+        "on_update": "global_enhancements.sync_contact.sync_from_main_doc",
+        "validate": "global_enhancements.supplier_query.sync_supplier_groups"
+    },    "Customer": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     }
 }
