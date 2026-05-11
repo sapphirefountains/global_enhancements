@@ -35,6 +35,7 @@ app_include_js = [
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 doctype_js = {
     "Project": ["public/js/unified_tab_controller.js"],
+    "Master Project": ["public/js/unified_tab_controller.js"],
     "Opportunity": ["public/js/unified_tab_controller.js", "public/js/disable_kanban_drag.js"],
     "Lead": ["public/js/primary_contact.js"],
     "Supplier": ["public/js/unified_tab_controller.js"],

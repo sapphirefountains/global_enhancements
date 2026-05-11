@@ -12,6 +12,9 @@ frappe.ui.form.on("Opportunity", {
 frappe.ui.form.on("Project", {
 	refresh: (frm) => global_enhancements.unified_controller.init(frm),
 });
+frappe.ui.form.on("Master Project", {
+	refresh: (frm) => global_enhancements.unified_controller.init(frm),
+});
 frappe.ui.form.on("Contact", {
 	refresh: (frm) => global_enhancements.unified_controller.init(frm),
 });
@@ -22,6 +25,20 @@ global_enhancements.unified_controller = {
 		this.setup_queries();
 		this.render_all();
 		this.setup_events();
+		this.setup_comments();
+	},
+
+	setup_comments: function () {
+		const frm = this.frm;
+		if (frm.fields_dict.custom_comments_field && window.erpnext && erpnext.utils.CRMNotes) {
+			if (!frm.crm_notes) {
+				frm.crm_notes = new erpnext.utils.CRMNotes({
+					frm: frm,
+					notes_wrapper: $(frm.fields_dict.custom_comments_field.wrapper),
+				});
+			}
+			frm.crm_notes.refresh();
+		}
 	},
 
 	setup_queries: function () {

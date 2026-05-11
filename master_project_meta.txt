@@ -1,0 +1,59 @@
+Traceback (most recent call last):
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/bench_helper.py", line 48, in invoke
+    return super().invoke(ctx)
+           ~~~~~~~~~~~~~~^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 1902, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 1298, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 853, in invoke
+    return callback(*args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/__init__.py", line 28, in _func
+    ret = f(ctx.obj, *args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/utils.py", line 274, in execute
+    _execute(context, method, args, kwargs, profile, extra_args)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/execute.py", line 100, in _execute
+    print(json.dumps(ret, default=json_handler).strip('"'))
+          ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/json/__init__.py", line 242, in dumps
+    **kw).encode(obj)
+          ~~~~~~^^^^^
+  File "/home/parker_bailey/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/json/encoder.py", line 202, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/home/parker_bailey/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/json/encoder.py", line 263, in iterencode
+    return _iterencode(o, 0)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/response.py", line 235, in json_handler
+    return obj.__json__()
+           ~~~~~~~~~~~~^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/model/base_document.py", line 280, in __json__
+    return self.as_dict(no_nulls=True)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/model/base_document.py", line 688, in as_dict
+    doc = self.get_valid_dict(convert_dates_to_str=convert_dates_to_str, ignore_nulls=no_nulls)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/model/base_document.py", line 558, in get_valid_dict
+    field_map = self.meta._fields
+                ^^^^^^^^^
+  File "/home/parker_bailey/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/functools.py", line 1126, in __get__
+    val = self.func(instance)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/model/base_document.py", line 284, in meta
+    return frappe.get_meta(self.doctype)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/model/meta.py", line 85, in get_meta
+    and (meta := frappe.client_cache.get_value(f"doctype_meta::{doctype}"))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/redis_wrapper.py", line 510, in get_value
+    key = self.redis.make_key(key, shared=shared)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/redis_wrapper.py", line 62, in make_key
+    return f"{frappe.local.conf.get('db_name')}|{key}".encode()
+              ^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/local.py", line 28, in __getattribute__
+    raise AttributeError(name)
+AttributeError: conf
+when serializing list item 0
+
+conf

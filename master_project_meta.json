@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/utils/bench_helper.py", line 48, in invoke
+    return super().invoke(ctx)
+           ~~~~~~~~~~~~~~^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 1902, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 1298, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/core.py", line 853, in invoke
+    return callback(*args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/env/lib/python3.14/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/__init__.py", line 28, in _func
+    ret = f(ctx.obj, *args, **kwargs)
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/utils.py", line 274, in execute
+    _execute(context, method, args, kwargs, profile, extra_args)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/parker_bailey/frappe/my-bench/apps/frappe/frappe/commands/execute.py", line 77, in _execute
+    code = compile(method, "<bench execute>", "eval")
+  File "<bench execute>", line 1
+    import json; print(json.dumps([f.as_dict() for f in frappe.get_meta('Master Project').fields]))
+                 ^^^^^
+SyntaxError: invalid syntax. Did you mean 'not'?
+
+invalid syntax (<bench execute>, line 1)
