@@ -180,6 +180,9 @@ doc_events = {
     "Opportunity": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc"
     },
+    "*": {
+            "after_save": "your_app.utils.global_triton_sync"
+        },
     "Supplier": {
         "on_update": "global_enhancements.sync_contact.sync_from_main_doc",
         "validate": "global_enhancements.supplier_query.sync_supplier_groups"
