@@ -106,7 +106,7 @@ doctype_css = {"Opportunity": "public/css/horizontal_scroll.css"}
 # before_install = "global_enhancements.install.before_install"
 # after_install = "global_enhancements.install.after_install"
 after_migrate = [
-	"global_enhancements.setup.custom_fields.create_unified_tabs",
+	"global_enhancements.setup.custom_fields.create_primary_contact_fields",
 	"global_enhancements.setup.supplier_groups.create_supplier_group_customizations"
 ]
 
