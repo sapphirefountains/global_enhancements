@@ -3,7 +3,7 @@ app_title = "Global Enhancements"
 app_publisher = "Sapphire Fountains"
 app_description = "Enhance features on Frappe globally."
 app_email = "info@sapphirefountains.com"
-app_license = "mit"
+app_version = "0.0.3"
 
 
 # Apps
