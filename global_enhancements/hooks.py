@@ -29,6 +29,7 @@ app_license = "mit"
 app_include_js = [
 	"/assets/global_enhancements/js/quill_mentions.js",
 	"/assets/global_enhancements/js/global_sidebar.js",
+	"/assets/global_enhancements/js/unlink_and_delete.js",
 ]
 
 # include js in doctype views
