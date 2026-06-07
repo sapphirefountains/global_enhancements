@@ -1,11 +1,11 @@
 // Copyright (c) 2026, Sapphire Fountains and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Triton Settings", {
+frappe.ui.form.on("Triton Assistant Settings", {
 	refresh(frm) {
 		frm.add_custom_button(__("Test Connection"), () => {
 			frm.call({
-				method: "global_enhancements.global_enhancements.doctype.triton_settings.triton_settings.test_connection",
+				method: "global_enhancements.global_enhancements.doctype.triton_assistant_settings.triton_assistant_settings.test_connection",
 				freeze: true,
 				freeze_message: __("Contacting Triton…"),
 			}).then((r) => {

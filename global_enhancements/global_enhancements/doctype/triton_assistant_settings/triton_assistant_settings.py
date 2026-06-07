@@ -5,21 +5,14 @@ import frappe
 from frappe.model.document import Document
 
 
-class TritonSettings(Document):
-    def validate(self):
-        if self.triton_base_url:
-            self.triton_base_url = self.triton_base_url.strip().rstrip("/")
-
-    def on_update(self):
-        # The proxy caches resolved settings/tokens; bust them on save so a
-        # changed URL or secret takes effect immediately.
-        frappe.cache().delete_value("triton_settings_resolved")
+class TritonAssistantSettings(Document):
+    pass
 
 
 @frappe.whitelist()
 def test_connection():
-    """Verify the configured Base URL + Gateway Secret by minting a bridge
-    token for the current user. Surfaced from the Settings form menu."""
+    """Verify the Triton connection (from the shared Triton Settings) by minting
+    a bridge token for the current user. Surfaced from the Settings form menu."""
     frappe.only_for("System Manager")
     from global_enhancements.triton_chat import mint_user_token, get_settings
 
@@ -27,9 +20,9 @@ def test_connection():
     if not settings.get("enabled"):
         return {"ok": False, "message": "Triton Assistant is disabled."}
     if not settings.get("base_url"):
-        return {"ok": False, "message": "Triton Base URL is not set."}
+        return {"ok": False, "message": "Gateway URL is not set in Triton Settings."}
     if not settings.get("gateway_secret"):
-        return {"ok": False, "message": "Gateway Secret is not set."}
+        return {"ok": False, "message": "Admin Webhook Secret is not set in Triton Settings."}
 
     try:
         token = mint_user_token(force_refresh=True)

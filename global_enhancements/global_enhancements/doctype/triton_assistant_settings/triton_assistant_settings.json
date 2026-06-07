@@ -4,26 +4,26 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "connection_section",
+  "intro_html",
+  "behavior_section",
   "enabled",
-  "triton_base_url",
-  "gateway_secret",
-  "column_break_conn",
   "default_model",
   "request_timeout",
-  "behavior_section",
+  "column_break_behavior",
   "enable_page_context",
   "enable_write_actions",
-  "column_break_behavior",
-  "debug_logging",
-  "help_section",
-  "connection_help"
+  "debug_logging"
  ],
  "fields": [
   {
-   "fieldname": "connection_section",
+   "fieldname": "intro_html",
+   "fieldtype": "HTML",
+   "options": "<p class=\"text-muted\">The Triton <b>connection</b> (Gateway URL + Admin Webhook Secret) is read from the shared <a href=\"/app/triton-settings\">Triton Settings</a>. This page only controls the embedded assistant widget. Use <b>Test Connection</b> (menu) to verify.</p>"
+  },
+  {
+   "fieldname": "behavior_section",
    "fieldtype": "Section Break",
-   "label": "Triton Connection"
+   "label": "Assistant Widget"
   },
   {
    "default": "1",
@@ -33,26 +33,7 @@
    "label": "Enable Triton Assistant"
   },
   {
-   "default": "https://triton.sapphirefountains.com",
-   "description": "Base URL of the Triton API (no trailing slash).",
-   "fieldname": "triton_base_url",
-   "fieldtype": "Data",
-   "label": "Triton Base URL",
-   "reqd": 1
-  },
-  {
-   "description": "Shared secret matching ERPNEXT_GATEWAY_SECRET on the Triton server. Used server-side to mint per-user tokens; never exposed to the browser.",
-   "fieldname": "gateway_secret",
-   "fieldtype": "Password",
-   "label": "Gateway Secret"
-  },
-  {
-   "fieldname": "column_break_conn",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "gemini-2.5-flash",
-   "description": "Default model new chats open with. Triton may auto-route to a stronger model per request.",
+   "description": "Default model new chats open with. Leave blank to use the Chat Model ID from Triton Settings. Triton may auto-route to a stronger model per request.",
    "fieldname": "default_model",
    "fieldtype": "Data",
    "label": "Default Model"
@@ -65,9 +46,8 @@
    "label": "Request Timeout (s)"
   },
   {
-   "fieldname": "behavior_section",
-   "fieldtype": "Section Break",
-   "label": "Behavior"
+   "fieldname": "column_break_behavior",
+   "fieldtype": "Column Break"
   },
   {
    "default": "1",
@@ -84,26 +64,11 @@
    "label": "Enable write actions (with confirmation)"
   },
   {
-   "fieldname": "column_break_behavior",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "0",
    "description": "Log proxy requests/responses to the Error Log for troubleshooting.",
    "fieldname": "debug_logging",
    "fieldtype": "Check",
    "label": "Debug Logging"
-  },
-  {
-   "fieldname": "help_section",
-   "fieldtype": "Section Break",
-   "label": "Diagnostics"
-  },
-  {
-   "fieldname": "connection_help",
-   "fieldtype": "HTML",
-   "label": "Connection Help",
-   "options": "<p class=\"text-muted\">Use <b>Test Connection</b> (menu) to verify the Base URL and Gateway Secret can mint a token for your account.</p>"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -112,7 +77,7 @@
  "modified": "2026-06-07 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Global Enhancements",
- "name": "Triton Settings",
+ "name": "Triton Assistant Settings",
  "owner": "Administrator",
  "permissions": [
   {
