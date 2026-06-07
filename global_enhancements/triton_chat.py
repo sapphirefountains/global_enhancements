@@ -35,17 +35,34 @@ _TOKEN_REFRESH_MARGIN_SEC = 120
 # Settings + auth
 # ---------------------------------------------------------------------------
 def get_settings() -> dict:
-    """Resolved Triton Settings as a plain dict (gateway secret decrypted)."""
-    doc = frappe.get_cached_doc("Triton Settings")
+    """Resolved config as a plain dict.
+
+    The Triton *connection* (Gateway URL + Admin Webhook Secret) is owned by the
+    shared "Triton Settings" single DocType (from the erpnext_enhancements app,
+    also used by the telephony gateway) — we reuse it so the secret lives in one
+    place. Widget *behavior* lives in our own "Triton Assistant Settings".
+    """
+    behavior = frappe.get_cached_doc("Triton Assistant Settings")
+
+    base_url, secret, conn_model = "", None, None
+    try:
+        conn = frappe.get_cached_doc("Triton Settings")
+        base_url = (conn.get("gateway_url") or "").strip().rstrip("/")
+        secret = conn.get_password("admin_webhook_secret") if conn.get("admin_webhook_secret") else None
+        conn_model = conn.get("chat_model_id")
+    except Exception:
+        # erpnext_enhancements / Triton Settings not present — assistant stays off.
+        pass
+
     return {
-        "enabled": bool(doc.enabled),
-        "base_url": (doc.triton_base_url or "").rstrip("/"),
-        "gateway_secret": doc.get_password("gateway_secret") if doc.gateway_secret else None,
-        "default_model": doc.default_model or "gemini-2.5-flash",
-        "timeout": int(doc.request_timeout or 120),
-        "enable_page_context": bool(doc.enable_page_context),
-        "enable_write_actions": bool(doc.enable_write_actions),
-        "debug": bool(doc.debug_logging),
+        "enabled": bool(behavior.enabled),
+        "base_url": base_url,
+        "gateway_secret": secret,
+        "default_model": (behavior.default_model or conn_model or "gemini-2.5-flash"),
+        "timeout": int(behavior.request_timeout or 120),
+        "enable_page_context": bool(behavior.enable_page_context),
+        "enable_write_actions": bool(behavior.enable_write_actions),
+        "debug": bool(behavior.debug_logging),
     }
 
 
@@ -68,9 +85,9 @@ def mint_user_token(force_refresh: bool = False) -> str:
 
     settings = get_settings()
     if not settings["base_url"]:
-        frappe.throw(_("Triton Base URL is not configured."))
+        frappe.throw(_("Gateway URL is not set in Triton Settings."))
     if not settings["gateway_secret"]:
-        frappe.throw(_("Triton Gateway Secret is not configured."))
+        frappe.throw(_("Admin Webhook Secret is not set in Triton Settings."))
 
     try:
         resp = requests.post(
