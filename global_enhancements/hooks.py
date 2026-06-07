@@ -30,6 +30,11 @@ app_include_js = [
 	"/assets/global_enhancements/js/quill_mentions.js",
 	"/assets/global_enhancements/js/global_sidebar.js",
 	"/assets/global_enhancements/js/unlink_and_delete.js",
+	"/assets/global_enhancements/js/triton_widget.js",
+]
+
+app_include_css = [
+	"/assets/global_enhancements/css/triton_widget.css",
 ]
 
 # include js in doctype views
